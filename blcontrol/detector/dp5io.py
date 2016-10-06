@@ -28,8 +28,7 @@ class DP5Device(object):
     def __init__(self, config):
         self.config = config
         self.port = self._find_port()
-        self.port.timeout = self.config.getint("Detector Port",
-                                               "timeout")
+        self.port.timeout = self.config.getint("Detector Port", "timeout")
 
     def _find_port(self):
         """ Finds the serial port to which the detector is connected.
