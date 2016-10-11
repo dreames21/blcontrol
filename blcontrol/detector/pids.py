@@ -32,12 +32,12 @@ SCOPE_OVFL = chr(0x82) + chr(3)
 SPEC = chr(0x81)
 
 SPEC_CHAN = {
-    SPEC + chr(1)    :  256,
-    SPEC + chr(3)    :  512,
-    SPEC + chr(5)    : 1024,
-    SPEC + chr(7)    : 2048,
-    SPEC + chr(9)    : 4096,
-    SPEC + chr(0x0B) : 8192
+    SPEC + chr(2)    :  256,
+    SPEC + chr(4)    :  512,
+    SPEC + chr(6)    : 1024,
+    SPEC + chr(8)    : 2048,
+    SPEC + chr(0x0A) : 4096,
+    SPEC + chr(0x0C) : 8192
 }
 
 ## Acknowledge packet PIDs ##

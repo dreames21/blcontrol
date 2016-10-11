@@ -48,29 +48,55 @@ class DP5Device(object):
             raise IOError("Detector not found")
         else:
             portpath = matches[0][0]
-        return DP5Serial(portpath)
+        return serial.Serial(portpath)
 
-    def send(self, command):
+    def send(self, *args):
         """Sends a command and checks the reply for errors.
 
         Note: Blocks until a reply is received or port times out.  The DP5
         should return either a response or acknowledge packet immediately after
         receiving a command.
         
-        Args:
-            command: a string or DP5Command object representing the
-                command to be sent to the DP5.
+        Args: a DP5Command or pid and data representing the command to be sent
+            to the DP5.
+
+        Returns (DP5Reply): Reply received from the device.
+        """
+        if len(args) == 2:
+            pid, data = args
+            output = DP5Command(pid, data).encode()
+        else:
+            command = args[0]
+        if isinstance(command, int):
+            output = DP5Command(command).encode()
+        elif isinstance(command, DP5Command):
+            output = command.encode()
+        else:
+            raise TypeError("`command` type invalid")
+        self.port.write(output)
+        return self.get_reply()
+
+    def get_reply(self):
+        """Reads a reply from the device.
 
         Raises:
             DeviceError: The device replied with an error condition.
             ChecksumError: Reply from device has bad checksum.
-
-        Returns (DP5Reply): Reply received from the device.
+            
+        Returns: A DP5Reply object encoding the packet received.
         """
-        self.port.write(command)
-        reply = self.port.read()
+        first = self.port.read(2)
+        if first != pids.SYNC:
+            raise TimeoutError
+        header = first + self.port.read(4)
+        datalen = byte2int(header[4:6], little_endian=False)
+        data = self.port.read(datalen)
+        checksum = self.port.read(2)
+        if len(header) + len(data) + len(checksum) != datalen + 8:
+            raise TimeoutError
+        reply = DP5Reply(header, data, checksum)
         if reply.pid[0] == pids.ACK and reply.pid != pids.ACK_OK:
-            errorstr = pids.ERRORS(reply.pid)
+            errorstr = pids.ERRORS[reply.pid]
             errmsg = "DP5 Device returned error {0}: {1}".format(reply.pid,
                                                                  errorstr)
             raise DeviceError(errmsg)
@@ -78,6 +104,7 @@ class DP5Device(object):
             raise ChecksumError
         else:
             return reply
+        
 
     def enable_mca(self):
         """Enables the MCA.
@@ -119,11 +146,16 @@ class DP5Device(object):
         Returns: A Spectrum object representing the reply received.
         """
         reply = self.send(DP5Command(pids.GETSPECSTAT))
-        if reply.pid not in pids.SPEC_CHAN:
+        try:
+            numchans = pids.SPEC_CHAN[reply.pid]
+        except KeyError:
             raise UnexpectedReplyError(reply.pid)
-        return [byte2int(reply.data[i:i+3]) for i in
-                range(0, len(reply.data), 3)]
-    
+        specdata = reply.data[:numchans*3]
+        spectrum = [byte2int(specdata[i:i+3]) for i in range(0,len(specdata),3)]
+        statdata = reply.data[numchans*3:]
+        status = parse_status(statdata)
+        return spectrum, status
+        
     def clear_spectrum(self):
         """Clears the current MCA spectrum.
 
@@ -237,54 +269,7 @@ class DP5Device(object):
         reply = self.send(pids.GETSTAT)
         if reply.pid != pids.STATUS:
             raise UnexpectedReplyError(reply.pid)
-        status_data = reply.data
-        return {
-            'fast count': byte2int(status_data[0:4]),
-            'slow count': byte2int(status_data[4:8]),
-            'GP count': byte2int(status_data[8:12]),
-            'accumulation time': (ord(status_data[12])/100.0 +
-                                 byte2int(status_data[13:16]))/10.0,
-            'real time': byte2int(status_data[20:24])/1000.0,
-            'firmware version': (ord(status_data[24]) & 0b11110000)/16 +
-                                0.01*(ord(status_data[24]) & 0b1111),
-            'FPGA version': (ord(status_data[25]) & 0b11110000)/16 +
-                             0.01*(ord(status_data[25]) & 0b1111),
-            'serial number': byte2int(status_data[26:30]),
-            'high voltage': 0.5*byte2int(status_data[30:32],
-                                         little_endian=False, signed=True),
-            'detector temperature (K)': 0.1*byte2int(chr(ord(status_data[32])
-                                                     &0b1111) + status_data[33],
-                                                 little_endian=False),
-            'board temperature (C)': byte2int(status_data[34],
-                                              little_endian=True, signed=True),
-            'preset real time reached': bool(ord(status_data[35])&1<<7),
-            'auto fast threshold locked': bool(ord(status_data[35])&1<<6),
-            'MCA enabled': bool(ord(status_data[35])&1<<5),
-            'preset counts reached': bool(ord(status_data[35])&1<<4),
-            'GATE enabled': not bool(ord(status_data[35])&1<<3),
-            'scope data ready': bool(ord(status_data[35])&1<<2),
-            'unit is configured': bool(ord(status_data[35])&1<<2),
-            'auto input offset searching': bool(ord(status_data[36])&1<<7),
-            'MCS finished': bool(ord(status_data[36])&1<<6),
-            'first packet since reboot': bool(ord(status_data[36])&1<<5),
-            'FPGA clock freq (MHz)': [20, 80][(ord(status_data[36])&2)/2],
-            'FPGA clock autoset': bool(ord(status_data[36])&1),
-            'firmware build number': ord(status_data[37])&0b1111,
-            'PC5 detected': bool(ord(status_data[38])&1<<7),
-            'high voltage polarity': ['neg', 'pos'][(ord(status_data[38])&1<<6)/
-                                                    (1<<6)],
-            'preamp voltage': [5., 8.5][(ord(status_data[38])&1<<5)/(1<<5)],
-            'device type': ['DP5', 'PX5', 'DP5G', 'MCA8000D'][ord(
-                                                              status_data[39])],
-            'list-mode clock (us)': [0.1, 1.][(ord(status_data[43])&4)/4],
-            'list-mode sync': ['INT', 'NOTIMETAG', 'EXT', 'FRAME'][
-                                                     ord(status_data[43])&0b11],
-            'AN_IN': byte2int(chr(ord(status_data[44])&0b11) + status_data[45],
-                              little_endian=False)/419.7,
-            'sequential buffering is running': bool(ord(status_data[46])&1<<1),
-            'current sequential buffer': byte2int(chr(ord(status_data[46])&1) +
-                                               chr(47))
-        }
+        return parse_status(reply.data)
 
     @property
     def dtype(self):
@@ -334,96 +319,9 @@ class DP5Device(object):
         return int(round((energy - offset)*calib_factor*self.gain
                    *self.num_chans))
 
-    
-class DP5Serial(object):
-    """A class for interacting with the DP5 via RS232.
-
-    Creates a serial port object and defines some methods for reading
-    and writing based on the specifications of the DP5.
-
-    Attributes:
-        port (str): The name of the serial port in use.
-        timeout (number): The number of seconds to wait for a reply
-            from the device.
-    """
-
-    def __init__(self, port, timeout=10):
-        """Creates a new instance of DP5Serial class.
-        Note:
-            The serial port is opened immediately upon instantiation of
-            a DP5Serial object.
-        """
-        self._serial = serial.Serial(port, baudrate=115200,
-                                     timeout=timeout)
-
-    def open(self):
-        """ Opens the serial port. """
-        self._serial.open()
-
-    def close(self):
-        """ Closes the serial port. """
-        self._serial.close()
-
-    @property
-    def timeout(self):
-        """ Return the timeout of the serial port, in seconds. """
-        return self._serial.timeout
-
-    @timeout.setter
-    def timeout(self, tim):
-        """ Set the serial port timeout, in seconds. """
-        self._serial.timeout = float(tim)
-
-    def write(self, command):
-        """Writes a command to the serial port.
-
-        This function accepts either a DP5Command object or an ASCII
-        string formatted according to the DP5 Programmer's Guide.
-
-        Args:
-            command: A DP5Command object or ASCII string encoding the
-                command to be sent to the DP5.
-
-        Raises:
-            TypeError: command argument is not one of the two types
-                listed above.
-        """
-        if isinstance(command, str):
-            if len(command) > 520:
-                raise ValueError("Command string must be no longer than"
-                                 " 520 bytes.")
-            output = command
-        elif isinstance(command, DP5Command):
-            output = command.encode()
-        else:
-            raise TypeError("`command` must be a string or DP5Command.")
-        self._serial.write(output)
-
-    def read(self):
-        """Reads a packet from the serial port.
-
-        This command blocks until it detects the sync bytes, or until
-        the read times out.  Once the sync bytes are detected, it reads
-        the rest of the header to determine the length of the packet
-        and then reads the rest of the packet.
-
-        Returns: A DP5Reply object encoding the packet received.
-        """
-        first = self._serial.read(2)
-        if first != pids.SYNC:
-            raise TimeoutError
-        header = first + self._serial.read(4)
-        datalen = byte2int(header[4:6], little_endian=False)
-        data = self._serial.read(datalen)
-        checksum = self._serial.read(2)
-        if len(header) + len(data) + len(checksum) != datalen + 8:
-            raise TimeoutError
-        return DP5Reply(header, data, checksum)
-
-
-class DP5USB(object):
-    """A class for interacting with the DP5 via USB."""
-    pass
+    def get_energies(self):
+        """Return a list of energy bins in use in the MCA."""
+        return [self.chan2energy(ch) for ch in range(self.num_chans)]
 
 
 class DP5Command(object):
@@ -538,3 +436,52 @@ class DP5Reply(object):
         ints = [ord(char) for char in packet]
         packetsum = add16b(ints)
         return add16b((packetsum, intchecksum)) == 0
+
+def parse_status(status_data):
+    return {
+        'fast count': byte2int(status_data[0:4]),
+        'slow count': byte2int(status_data[4:8]),
+        'GP count': byte2int(status_data[8:12]),
+        'accumulation time': (ord(status_data[12])/100.0 +
+                             byte2int(status_data[13:16]))/10.0,
+        'real time': byte2int(status_data[20:24])/1000.0,
+        'firmware version': (ord(status_data[24]) & 0b11110000)/16 +
+                            0.01*(ord(status_data[24]) & 0b1111),
+        'FPGA version': (ord(status_data[25]) & 0b11110000)/16 +
+                         0.01*(ord(status_data[25]) & 0b1111),
+        'serial number': byte2int(status_data[26:30]),
+        'high voltage': 0.5*byte2int(status_data[30:32],
+                                     little_endian=False, signed=True),
+        'detector temperature (K)': 0.1*byte2int(chr(ord(status_data[32])
+                                                 &0b1111) + status_data[33],
+                                             little_endian=False),
+        'board temperature (C)': byte2int(status_data[34],
+                                          little_endian=True, signed=True),
+        'preset real time reached': bool(ord(status_data[35])&1<<7),
+        'auto fast threshold locked': bool(ord(status_data[35])&1<<6),
+        'MCA enabled': bool(ord(status_data[35])&1<<5),
+        'preset counts reached': bool(ord(status_data[35])&1<<4),
+        'GATE enabled': not bool(ord(status_data[35])&1<<3),
+        'scope data ready': bool(ord(status_data[35])&1<<2),
+        'unit is configured': bool(ord(status_data[35])&1<<2),
+        'auto input offset searching': bool(ord(status_data[36])&1<<7),
+        'MCS finished': bool(ord(status_data[36])&1<<6),
+        'first packet since reboot': bool(ord(status_data[36])&1<<5),
+        'FPGA clock freq (MHz)': [20, 80][(ord(status_data[36])&2)/2],
+        'FPGA clock autoset': bool(ord(status_data[36])&1),
+        'firmware build number': ord(status_data[37])&0b1111,
+        'PC5 detected': bool(ord(status_data[38])&1<<7),
+        'high voltage polarity': ['neg', 'pos'][(ord(status_data[38])&1<<6)/
+                                                (1<<6)],
+        'preamp voltage': [5., 8.5][(ord(status_data[38])&1<<5)/(1<<5)],
+        'device type': ['DP5', 'PX5', 'DP5G', 'MCA8000D'][ord(
+                                                          status_data[39])],
+        'list-mode clock (us)': [0.1, 1.][(ord(status_data[43])&4)/4],
+        'list-mode sync': ['INT', 'NOTIMETAG', 'EXT', 'FRAME'][
+                                                 ord(status_data[43])&0b11],
+        'AN_IN': byte2int(chr(ord(status_data[44])&0b11) + status_data[45],
+                          little_endian=False)/419.7,
+        'sequential buffering is running': bool(ord(status_data[46])&1<<1),
+        'current sequential buffer': byte2int(chr(ord(status_data[46])&1) +
+                                           chr(47))
+    }
