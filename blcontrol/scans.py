@@ -5,17 +5,17 @@ import time
 
 from blcontrol.utils import cen_fwhm, com
 
-class LinearScanner(threading.Thread):
-    def __init__(self, det, motor, start, end, inc, time):
-        self.det = det
-        self.motor = motor
-        if not (motor.is_in_range(start) and motor.is_in_range(end)):
-            raise ValueError("Scan limits are outside of limits of "
-                             "travel of motor {0}".format(motor.name))
-        if start > end:
-            inc *= -1
-        numpts = int((end - start)/inc) + 1
-        self.locations = [start + i*inc for i in range(numpts)]
+#class LinearScanner(threading.Thread):
+    #def __init__(self, det, motor, start, end, inc, time):
+        #self.det = det
+        #self.motor = motor
+        #if not (motor.is_in_range(start) and motor.is_in_range(end)):
+            #raise ValueError("Scan limits are outside of limits of "
+                             #"travel of motor {0}".format(motor.name))
+        #if start > end:
+            #inc *= -1
+        #numpts = int((end - start)/inc) + 1
+        #self.locations = [start + i*inc for i in range(numpts)]
 
 
 class ScanData(object):
@@ -23,6 +23,7 @@ class ScanData(object):
         self.timestamp = time.asctime()
         self.samplename = ''
 
+ 
 class Spectrum(ScanData):
     def __init__(self, cts, energies, settings):
         self.counts = cts
@@ -34,7 +35,7 @@ class Spectrum(ScanData):
     def total_count(self):
         return sum(self.counts)
 
-    def roi_data(self, roi):
+    def roi_counts(self, roi):
         """Returns the data corresponding to the ROI energies.
 
          Args:
@@ -43,7 +44,7 @@ class Spectrum(ScanData):
         """
         start, end = roi
         energies = self.energies
-        data = self.data
+        data = self.counts
         return [data[i] for i in range(len(data))
                 if energies[i] >= start and energies[i] <= end]
 
@@ -51,8 +52,8 @@ class Spectrum(ScanData):
         start, end = roi
         return [e for e in self.energies if e >= start and e <= end]
 
-    def roi_count(self, roi):
-        return sum(self.roi_data(roi))
+    def roi_total_count(self, roi):
+        return sum(self.roi_counts(roi))
 
     def export(self, filename):
         filename = os.path.expanduser(filename)
@@ -71,19 +72,19 @@ class Spectrum(ScanData):
                    footer=footer)
 
     def cen_fwhm(self):
-        return cen_fwhm(self.energies, self.data)
+        return cen_fwhm(self.energies, self.counts)
 
     def roi_cen_fwhm(self, roi):
-        return cen_fwhm(self.roi_energies(roi), self.roi_data(roi))
+        return cen_fwhm(self.roi_energies(roi), self.roi_counts(roi))
 
     def peakloc_max(self):
-        maximum = max(self.data)
-        peakloc = self.energies[self.data.index(maximum)]
+        maximum = max(self.counts)
+        peakloc = self.energies[self.counts.index(maximum)]
         return peakloc, maximum
 
     def roi_peakloc_max(self, roi):
-        maximum = max(self.roi_data(roi))
-        peakloc = self.energies[self.roi_data(roi).index(maximum)]
+        maximum = max(self.roi_counts(roi))
+        peakloc = self.energies[self.roi_counts(roi).index(maximum)]
         return peakloc, maximum
 
 
@@ -122,7 +123,7 @@ class LinearScan(ScanData):
         return [spectrum.total_count for spectrum in self.spectra]
 
     def roi_counts(self, roi):
-        return [spectrum.roi_count(roi) for spectrum in self.spectra]
+        return [spectrum.roi_total_count(roi) for spectrum in self.spectra]
 
     def cen_fwhm(self):
         return cen_fwhm(self.locations, self.counts)
@@ -132,14 +133,15 @@ class LinearScan(ScanData):
 
     def peakloc_max(self):
         maximum = max(self.counts)
-        peakloc = self.locations[self.counts.index(maximum)]
+        peakloc = self.locations[self.counts().index(maximum)]
         return peakloc, maximum
 
     def peakloc_max_roi(self, roi):
         roi_cts = self.roi_counts(roi)
         maximum = max(roi_cts)
-        peakloc = self.locations[self.roi_cts.index(maximum)]
+        peakloc = self.locations[self.roi_counts(roi).index(maximum)]
         return peakloc, maximum
+
 
 class GridScan(ScanData):
     def __init__(self, xlocs, ylocs, spectra):
@@ -149,20 +151,20 @@ class GridScan(ScanData):
         super(GridScan, self).__init__()
 
     def counts(self):
-        M, N = np.shape(spectra)
+        M, N = np.shape(self.spectra)
         cts = np.zeros((M,N))
         for i in range(M):
             for j in range(N):
-                if spectra[i,j]:
-                    cts[i,j] = spectra[i,j].total_count()
+                if self.spectra[i,j]:
+                    cts[i,j] = self.spectra[i,j].total_count()
 
     def roi_counts(self, roi):
-        M, N = np.shape(spectra)
+        M, N = np.shape(self.spectra)
         cts = np.zeros((M,N))
         for i in range(M):
             for j in range(N):
-                if spectra[i,j]:
-                    cts[i,j] = spectra[i,j].roi_count(roi)
+                if self.spectra[i,j]:
+                    cts[i,j] = self.spectra[i,j].roi_total_count(roi)
 
     def cen(self):
         return com(self.counts(), self.xlocs, self.ylocs)

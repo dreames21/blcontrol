@@ -262,6 +262,9 @@ class DP5Device(object):
         else:
             return res
 
+    def get_settings_dict(self):
+        pass
+
     def get_status(self):
         """Requests a status packet from the detector.
 

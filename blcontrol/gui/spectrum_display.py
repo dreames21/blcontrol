@@ -7,4 +7,3 @@ if sys.version_info[0] < 3:
     import tkMessageBox as messagebox
 else:
     from tkinter import * #pylint: disable=import-error, wildcard-import
-
