@@ -11,6 +11,7 @@ else:
 from blcontrol.stages.stageio import StageIO
 from blcontrol.gui.motor_widget import MotorFrame
 from blcontrol.gui.det_status import DetectorStatus
+from blcontrol.gui.scancontrol import ScanController
 
 from blcontrol.testing import FakeDet
 
@@ -19,12 +20,21 @@ class BeamlineGUI(Tk):
         Tk.__init__(self, **options)
         self.sio = StageIO(config)
         self.det = FakeDet()
-        self.motorwidget = MotorFrame(self, self.sio)
-        self.motorwidget.pack(side=LEFT, fill=BOTH, expand=1)
+        self.make_widgets()
+        
+    def make_widgets(self):
         self.det_status_widget = DetectorStatus(self, self.det)
-        self.det_status_widget.pack(side=RIGHT, fill=BOTH, expand=1)
+        self.det_status_widget.grid(row=0, column=2, sticky='nsew')
+        self.motorwidget = MotorFrame(self, self.sio)
+        self.motorwidget.grid(row=1, column=2, sticky='nsew')
+        self.scancontrol = ScanController(self, self.det, self.sio)
+        self.scancontrol.grid(row=0, column=0, columnspan=2, rowspan=2, sticky='nsew')
         for child in self.winfo_children():
             child.config(borderwidth=2, relief=GROOVE)
+        for r in range(0,3):
+            self.rowconfigure(r, weight=1)
+        for c in range(0,3):
+            self.columnconfigure(c, weight=1)
         self.protocol('WM_DELETE_WINDOW', self.terminate)
         self.wm_title('GBeamline Control')
 

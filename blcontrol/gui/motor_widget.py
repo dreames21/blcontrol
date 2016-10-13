@@ -9,8 +9,9 @@ if sys.version_info[0] < 3:
 else:
     from tkinter import * #pylint: disable=import-error, wildcard-import
 import blcontrol.stages.commands as com
+from blcontrol.gui.misc import FloatValFrame
 
-class SingleMotorWidget(ttk.Frame):
+class SingleMotorWidget(FloatValFrame):
     """Base class for control widgets for a single motor.
 
     Attributes:
@@ -23,7 +24,7 @@ class SingleMotorWidget(ttk.Frame):
     """
     
     def __init__(self, parent, motor, **options):
-        ttk.Frame.__init__(self, parent, **options)
+        FloatValFrame.__init__(self, parent, **options)
         self.motor = motor
         self.current_pos = StringVar()
         self.make_widgets()
@@ -34,32 +35,14 @@ class SingleMotorWidget(ttk.Frame):
         name.grid(column=0, row=0, sticky=E, padx=(5,1))
         pos = ttk.Label(self, textvariable=self.current_pos, width=11, anchor=E)
         pos.grid(column=1, row=0, padx=2)
-        vcmd = (self.register(self.on_validate), '%P')
         self.goto = ttk.Entry(self, width=7, justify=RIGHT, validate='key',
-                              validatecommand=vcmd)
+                              validatecommand=self.vcmd)
         self.goto.grid(column=2, row=0, padx=2)
         self.goto.bind('<KeyPress-KP_Enter>', self.move) #numpad Enter key
         self.goto.bind('<KeyPress-Return>', self.move)
         self.zerobutt = ttk.Button(self, text='Zero',
                                    command=self.motor.zero_here, width=5)
         self.zerobutt.grid(column=4, row=0, padx=5)
-        #ttk.Button(self, text='Go', command=self.move, width=5).grid(column=3, row=0, padx=2)
-        
-    def on_validate(self, P):
-        """Validation for goto position entries.
-
-        Returns:
-            True if new entry text is blank or a valid float, False otherwise.
-        """
-        if P == '':
-            return True
-        try:
-            float(P)
-        except ValueError:
-            self.bell()
-            return False
-        else:
-            return True
 
     def check_queue(self):
         """Loop to check the position queue for new data every 50ms."""
@@ -200,7 +183,6 @@ class MotorFrame(ttk.Frame):
         self.after(300, lambda: messagebox.showwarning('Unhomed Motors',
                                                        message))
             
-    
     def check_for_errs(self):
         """Loop to check error message queue for errors every 300ms."""
         try:

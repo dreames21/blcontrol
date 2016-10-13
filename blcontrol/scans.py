@@ -5,25 +5,6 @@ import time
 
 from blcontrol.utils import cen_fwhm, com
 
-#class LinearScanner(threading.Thread):
-    #def __init__(self, det, motor, start, end, inc, time):
-        #self.det = det
-        #self.motor = motor
-        #if not (motor.is_in_range(start) and motor.is_in_range(end)):
-            #raise ValueError("Scan limits are outside of limits of "
-                             #"travel of motor {0}".format(motor.name))
-        #if start > end:
-            #inc *= -1
-        #numpts = int((end - start)/inc) + 1
-        #self.locations = [start + i*inc for i in range(numpts)]
-
-
-class ScanData(object):
-    def __init__(self):
-        self.timestamp = time.asctime()
-        self.samplename = ''
-
- 
 class Spectrum(ScanData):
     def __init__(self, cts, energies, settings):
         self.counts = cts

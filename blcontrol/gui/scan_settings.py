@@ -15,25 +15,28 @@ class LinearScanSettings(FloatValFrame):
     def make_widgets(self):
         motselframe = ttk.Frame(self)
         ttk.Label(motselframe, text='Motor: ').pack(side=LEFT)
+        self.motorname = StringVar()
         self.motorsel = ttk.Combobox(motselframe, width=3, state='readonly',
-                                     values=self.stageio.motors.keys())
+            textvariable=self.motorname, values=self.stageio.motors.keys())
         self.motorsel.bind('<<ComboboxSelected>>', self.change_unit)
         self.motorsel.pack(side=LEFT)
         motselframe.pack(side=TOP, fill=BOTH, expand=1, pady=3)
 
         acctimeframe = ttk.Frame(self)
         ttk.Label(acctimeframe, text='Acc time: ').pack(side=LEFT)
-        self.acctime = ttk.Entry(acctimeframe, width=5, validate='key',
-                                 validatecommand=self.vcmd)
-        self.acctime.pack(side=LEFT)
+        self.acctime = StringVar()
+        accent = ttk.Entry(acctimeframe, width=5, validate='key',
+            validatecommand=self.vcmd, textvariable=self.acctime)
+        accent.pack(side=LEFT)
         ttk.Label(acctimeframe, text=' s/pt').pack(side=LEFT)
         acctimeframe.pack(side=TOP, fill=BOTH, expand=1, pady=3)
 
         stepsizeframe = ttk.Frame(self)
         ttk.Label(stepsizeframe, text='Step size: ').pack(side=LEFT)
-        self.stepsize = ttk.Entry(stepsizeframe, width=5, validate='key',
-                                  validatecommand=self.vcmd)
-        self.stepsize.pack(side=LEFT)
+        self.stepsize = StringVar()
+        stepent = ttk.Entry(stepsizeframe, width=5, validate='key',
+            textvariable=self.stepsize, validatecommand=self.vcmd)
+        stepent.pack(side=LEFT)
         self.stepunit = StringVar(value=' mm')
         lab = ttk.Label(stepsizeframe, textvariable=self.stepunit)
         lab.pack(side=LEFT)
@@ -41,16 +44,21 @@ class LinearScanSettings(FloatValFrame):
 
         extframe = ttk.Frame(self)
         ttk.Label(extframe, text='Extent: ').pack(side=LEFT)
-        self.start = ttk.Entry(extframe, width=4, validate='key',
-                                  validatecommand=self.vcmd)
-        self.start.pack(side=LEFT)
+        self.start = StringVar()
+        startent = ttk.Entry(extframe, width=4, validate='key',
+            textvariable = self.start, validatecommand=self.vcmd)
+        startent.pack(side=LEFT)
         ttk.Label(extframe, text=' to ').pack(side=LEFT)
-        self.end = ttk.Entry(extframe, width=4, validate='key',
-                                validatecommand=self.vcmd)
-        self.end.pack(side=LEFT)
+        self.end = StringVar()
+        endent = ttk.Entry(extframe, width=4, validate='key',
+            textvariable=self.end, validatecommand=self.vcmd)
+        endent.pack(side=LEFT)
         lab2 = ttk.Label(extframe, textvariable=self.stepunit)
         lab2.pack(side=LEFT)
         extframe.pack(side=TOP, fill=BOTH, expand=1, pady=3)
+
+        self.variables = [self.motorname, self.acctime, self.stepsize,
+                          self.start, self.end]
 
     def change_unit(self, _):
         self.motorsel.selection_clear()
@@ -59,6 +67,26 @@ class LinearScanSettings(FloatValFrame):
             self.stepunit.set(' mm')
         else:
             self.stepunit.set(' deg')
+
+    def clear_widgets(self):
+        self.motorname.set('')
+        self.acctime.set('')
+        self.stepsize.set('')
+        self.start.set('')
+        self.end.set('')
+
+    def get_scan_params(self):
+        return {'type'     : 'linear',
+                'motorname': self.motoranme.get(),
+                'acctime'  : float(self.acctime.get()),
+                'stepsize' : float(self.stepsize.get()),
+                'start'    : float(self.start.get()),
+                'end'      : float(self.end.get())
+                }
+
+    def is_ready(self):
+        return (self.motorname.get() and self.acctime.get() and
+                self.stepsize.get() and self.start.get() and self.end.get())
 
 
 class GridScanSettings(FloatValFrame):
@@ -69,30 +97,50 @@ class GridScanSettings(FloatValFrame):
     def make_widgets(self):
         acctimeframe = ttk.Frame(self)
         ttk.Label(acctimeframe, text='Acc time: ').pack(side=LEFT)
-        self.acctime = ttk.Entry(acctimeframe, width=5, validate='key',
-                                 validatecommand=self.vcmd)
-        self.acctime.pack(side=LEFT)
+        self.acctime = StringVar()
+        accent = ttk.Entry(acctimeframe, width=5, validate='key',
+            textvariable = self.acctime, validatecommand=self.vcmd)
+        accent.pack(side=LEFT)
         ttk.Label(acctimeframe, text=' s/pt').pack(side=LEFT)
         acctimeframe.pack(side=TOP, fill=BOTH, expand=1, pady=3)
 
         stepsizeframe = ttk.Frame(self)
         ttk.Label(stepsizeframe, text='Step size: ').pack(side=LEFT)
-        self.stepsize = ttk.Entry(stepsizeframe, width=5, validate='key',
-                                  validatecommand=self.vcmd)
-        self.stepsize.pack(side=LEFT)
+        self.stepsize = StringVar()
+        stepent = ttk.Entry(stepsizeframe, width=5, validate='key',
+            textvariable=self.stepsize, validatecommand=self.vcmd)
+        stepent.pack(side=LEFT)
         ttk.Label(stepsizeframe, text=' mm').pack(side=LEFT)
         stepsizeframe.pack(side=TOP, fill=BOTH, expand=1, pady=3)
 
         gridsizeframe = ttk.Frame(self)
         vals = ['{0}x{0}'.format(i).center(6) for i in range(3, 13, 2)]
-        self.gridvals = {v: int(v.split('x')[0]) for v in vals}
         ttk.Label(gridsizeframe, text='Grid size: ').pack(side=LEFT)
-        self.gridsizesel = ttk.Combobox(gridsizeframe, values=vals, width=5,
-                                        state='readonly')
-        self.gridsizesel.bind('<<ComboboxSelected>>',
-                           lambda x: self.gridsizesel.selection_clear())
-        self.gridsizesel.pack(side=LEFT)
+        self.gridsize = StringVar()
+        gridsizesel = ttk.Combobox(gridsizeframe, values=vals, width=5,
+            textvariable=self.gridsize, state='readonly')
+        gridsizesel.bind('<<ComboboxSelected>>',
+                           lambda x: gridsizesel.selection_clear())
+        gridsizesel.pack(side=LEFT)
         gridsizeframe.pack(side=TOP, fill=BOTH, expand=1, pady=3)
+
+        self.variables = [self.acctime, self.stepsize, self.gridsize]
+
+    def clear_widgets(self):
+        self.acctime.set('')
+        self.stepsize.set('')
+        self.gridsize.set('')
+        
+    def get_scan_params(self):
+        return {'type'     : 'grid',
+                'acctime'  : float(self.acctime.get()),
+                'stepsize' : float(self.stepsize.get()),
+                'gridsize' : int(self.gridsize.get().split('x')[0])
+                }
+
+    def is_ready(self):
+        return (self.acctime.get() and self.stepsize.get()
+                and self.gridsize.get())
 
 
 class SpectrumSettings(FloatValFrame):
@@ -103,22 +151,38 @@ class SpectrumSettings(FloatValFrame):
     def make_widgets(self):
         acctimeframe = ttk.Frame(self)
         ttk.Label(acctimeframe, text='Acc time: ').pack(side=LEFT)
-        self.acctime = ttk.Entry(acctimeframe, width=5, validate='key',
-                                 validatecommand=self.vcmd)
-        self.acctime.pack(side=LEFT)
+        self.acctime = StringVar()
+        acctime = ttk.Entry(acctimeframe, width=5, validate='key',
+            textvariable=self.acctime, validatecommand=self.vcmd)
+        acctime.pack(side=LEFT)
         ttk.Label(acctimeframe, text=' sec').pack(side=LEFT)
         acctimeframe.pack(side=TOP, fill=BOTH, expand=1, pady=3)
 
         chanframe = ttk.Frame(self)
         ttk.Label(chanframe, text='MCA Channels: ').pack(side=LEFT)
         vals = [256, 512, 1024, 2048, 4096, 8192]
-        self.chansel = ttk.Combobox(chanframe, values=vals, state='readonly',
-                                    width=4)
-        self.chansel.bind('<<ComboboxSelected>>',
-                          lambda x: self.chansel.selection_clear())
-        self.chansel.pack(side=LEFT)
+        self.chans = StringVar()
+        chansel = ttk.Combobox(chanframe, values=vals, state='readonly',
+            textvariable=self.chans, width=4)
+        chansel.bind('<<ComboboxSelected>>',
+                          lambda x: chansel.selection_clear())
+        chansel.pack(side=LEFT)
         chanframe.pack(side=TOP, fill=BOTH, expand=1, pady=3)
 
+        self.variables = [self.acctime, self.chans]
+
+    def clear_widgets(self):
+        self.acctime.set('')
+        self.chans.set('')
+
+    def get_scan_params(self):
+        return {'type'    : 'spectrum',
+                'acctime' : float(self.acctime.get()),
+                'chans'   : self.chans.get()
+                }
+
+    def is_ready(self):
+        return self.acctime.get() and self.chans.get()
 
 class SettingsFrame(FloatValFrame):
     def __init__(self, parent, sio, **options):
@@ -129,18 +193,21 @@ class SettingsFrame(FloatValFrame):
     def make_widgets(self):
         title = ttk.Label(self, text='Scan Settings', font='TkHeadingFont', anchor=CENTER)
         title.grid(row=0, column=0, pady=7, sticky=W+E)
-                
-        roiframe = ttk.Frame(self)
-        ttk.Label(roiframe, text='ROI: ').pack(side=LEFT)
-        self.roistart = ttk.Entry(roiframe, width=4, validate='key',
+
+        nameframe = ttk.Frame(self)
+        ttk.Label(nameframe, text='Sample Name: ').grid(row=0, column=0, pady=3)
+        self.samplename = ttk.Entry(nameframe)
+        self.samplename.grid(row=0, column=1, columnspan=4)
+        ttk.Label(nameframe, text='ROI: ').grid(row=1, column=0, sticky=E)
+        self.roistart = ttk.Entry(nameframe, width=5, validate='key',
                                   validatecommand=self.vcmd)
-        self.roistart.pack(side=LEFT)
-        ttk.Label(roiframe, text=' to ').pack(side=LEFT)
-        self.roiend = ttk.Entry(roiframe, width=4, validate='key',
+        self.roistart.grid(row=1, column=1, sticky=W, pady=3)
+        ttk.Label(nameframe, text=' to ').grid(row=1, column=2)
+        self.roiend = ttk.Entry(nameframe, width=5, validate='key',
                                 validatecommand=self.vcmd)
-        self.roiend.pack(side=LEFT)
-        ttk.Label(roiframe, text=' keV').pack(side=LEFT)
-        roiframe.grid(row=1, column=0, pady=3, padx=5)
+        self.roiend.grid(row=1, column=3)
+        ttk.Label(nameframe, text=' keV').grid(row=1, column=4, sticky=E)
+        nameframe.grid(row=2, column=0, pady=3, padx=5)
 
         scantypeframe = ttk.Frame(self)
         ttk.Label(scantypeframe, text='Scan Type: ').pack(side=LEFT)
@@ -151,24 +218,27 @@ class SettingsFrame(FloatValFrame):
                                textvar=self.scantype, state='readonly')
         scansel.bind('<<ComboboxSelected>>', lambda x: scansel.selection_clear())
         scansel.pack(side=LEFT)
-        scantypeframe.grid(row=2, column=0, pady=5, padx=5)
+        scantypeframe.grid(row=3, column=0, pady=5, padx=5)
 
-        self.curr_scan = ttk.Frame(self)
-        self.curr_scan.grid(row=3, column=0, pady=3, padx=5, sticky='nswe')
-        self.curr_scan.config(borderwidth=1, relief=SUNKEN)
-        self.curr_scan.rowconfigure(0, weight=1)
-        self.rowconfigure(3, minsize=115)
-        self.gridset = GridScanSettings(self.curr_scan)
-        self.linset = LinearScanSettings(self.curr_scan, self.sio)
-        self.specset = SpectrumSettings(self.curr_scan)
+        self.paramframe = ttk.Frame(self)
+        self.paramframe.grid(row=4, column=0, pady=3, padx=5, sticky='nswe')
+        self.paramframe.config(borderwidth=1, relief=SUNKEN)
+        self.paramframe.rowconfigure(0, weight=1)
+        self.rowconfigure(4, minsize=115)
+        self.gridset = GridScanSettings(self.paramframe)
+        self.linset = LinearScanSettings(self.paramframe, self.sio)
+        self.specset = SpectrumSettings(self.paramframe)
         self.scantype.set('Single Spectrum')
+        for var in (self.gridset.variables + self.linset.variables +
+                    self.specset.variables):
+            var.trace('w', self.check_if_ready)
 
-        buttonframe = ttk.Frame(self)
-        ttk.Button(buttonframe, text='Start', command=self.start_scan).pack(
-            side=LEFT)
-        ttk.Button(buttonframe, text='Stop', command=self.stop_scan).pack(
-            side=RIGHT)
-        buttonframe.grid(row=4, column=0, pady=3, padx=5)
+        buttons = ttk.Frame(self)
+        self.startbutt = ttk.Button(buttons, text='Start', state=DISABLED)
+        self.startbutt.pack(side=LEFT, expand=1)
+        self.stopbutt = ttk.Button(buttons, text='Stop')
+        self.stopbutt.pack(side=RIGHT, expand=1)
+        buttons.grid(column=0, row=5, pady=3, padx=5, sticky='nswe')
 
         self.columnconfigure(0, weight=1)
         for r in (0,3,4):
@@ -176,19 +246,31 @@ class SettingsFrame(FloatValFrame):
 
     def change_scan_type(self, *args):
         value = self.scantype.get()
-        for child in self.curr_scan.winfo_children():
+        for child in self.paramframe.winfo_children():
+            child.clear_widgets()
             child.grid_forget()
         if value == 'Single Spectrum':
-            newscan = self.specset
+            self.curr_scan = self.specset
         elif value == 'Linear Scan':
-            newscan = self.linset
+            self.curr_scan = self.linset
         elif value == 'Grid Scan':
-            newscan = self.gridset
-        newscan.grid(row=0, column=0, pady=3, padx=5)
+            self.curr_scan = self.gridset
+        self.curr_scan.grid(row=0, column=0, pady=3, padx=5)
 
-    def start_scan(self):
-        pass
-
-    def stop_scan(self):
-        pass
-    
+    def get_scan_params(self):
+        params = self.curr_scan.get_scan_params()
+        roistart = self.roistart.get()
+        roiend = self.roiend.get()
+        if roistart and roiend:
+            roi = (float(self.roistart.get()), float(self.roiend.get()))
+        else:
+            roi = None
+        params['roi'] = roi
+        params['samplename'] = self.samplename.get()
+        return params
+        
+    def check_if_ready(self, *args):
+        if self.curr_scan.is_ready():
+            self.startbutt.config(state=NORMAL)
+        else:
+            self.startbutt.config(state=DISABLED)

@@ -169,6 +169,23 @@ class Motor(object):
         except Queue.Empty:
             raise TimeoutError('Read timed out.')
         return reply
+
+    def get_reply_notimeout(self, commandnum=None):
+        """Read a reply from the motor controller.
+
+        Note: Blocks until a valid reply is received.
+
+        Args:
+            commandnum (int, optional): If provided, this method will return
+                only a reply with this command number.
+
+        Returns (zaber.serial.BinaryReply):
+            The reply received from the motor controller.
+        """
+        reply = self.reply_queue.get()
+        if commandnum is not None:
+            while (reply.command_number != commandnum):
+                reply = self.reply_queue.get(self.port.timeout)
             
     def stepdata2pos(self, stepdata):
         """Converts steps to real units based on resolution and zero position."""
@@ -192,6 +209,11 @@ class Motor(object):
     def start_move(self, position):
         """Signals the motor to begin moving to `position`."""
         self.send(com.MVABS, self.pos2stepdata(position))
+
+    def finish_move(self):
+        """Returns position when motor has finished moving."""
+        stepdata = self.get_reply_notimeout(com.MVABS)
+        return stepdata2pos(stepdata)
 
     def get_status(self):
         """Returns a string summarizing the status of the motor."""
