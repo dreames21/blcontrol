@@ -52,10 +52,6 @@ class LinearScanSettings(FloatValFrame):
         lab2.pack(side=LEFT)
         extframe.pack(side=TOP, fill=BOTH, expand=1, pady=3)
 
-        ttk.Button(self, text='Start', command=self.start_scan).pack(side=LEFT,
-                                                                     pady=3)
-        ttk.Button(self, text='Stop', command=self.stop_scan).pack(side=RIGHT)
-
     def change_unit(self, _):
         self.motorsel.selection_clear()
         motname = self.motorsel.get()
@@ -64,11 +60,6 @@ class LinearScanSettings(FloatValFrame):
         else:
             self.stepunit.set(' deg')
 
-    def start_scan(self):
-        pass
-
-    def stop_scan(self):
-        pass
 
 class GridScanSettings(FloatValFrame):
     def __init__(self, parent, **options):
@@ -103,15 +94,6 @@ class GridScanSettings(FloatValFrame):
         self.gridsizesel.pack(side=LEFT)
         gridsizeframe.pack(side=TOP, fill=BOTH, expand=1, pady=3)
 
-        ttk.Button(self, text='Start', command=self.start_scan).pack(side=LEFT,
-                                                                     pady=3)
-        ttk.Button(self, text='Stop', command=self.stop_scan).pack(side=RIGHT)
-
-    def start_scan(self):
-        pass
-
-    def stop_scan(self):
-        pass
 
 class SpectrumSettings(FloatValFrame):
     def __init__(self, parent, **options):
@@ -137,28 +119,76 @@ class SpectrumSettings(FloatValFrame):
         self.chansel.pack(side=LEFT)
         chanframe.pack(side=TOP, fill=BOTH, expand=1, pady=3)
 
-        ttk.Button(self, text='Start', command=self.start_scan).pack(side=LEFT,
-                                                                     pady=3)
-        ttk.Button(self, text='Stop', command=self.stop_scan).pack(side=RIGHT)
+
+class SettingsFrame(FloatValFrame):
+    def __init__(self, parent, sio, **options):
+        FloatValFrame.__init__(self, parent, **options)
+        self.sio = sio
+        self.make_widgets()
+        
+    def make_widgets(self):
+        title = ttk.Label(self, text='Scan Settings', font='TkHeadingFont', anchor=CENTER)
+        title.grid(row=0, column=0, pady=7, sticky=W+E)
+                
+        roiframe = ttk.Frame(self)
+        ttk.Label(roiframe, text='ROI: ').pack(side=LEFT)
+        self.roistart = ttk.Entry(roiframe, width=4, validate='key',
+                                  validatecommand=self.vcmd)
+        self.roistart.pack(side=LEFT)
+        ttk.Label(roiframe, text=' to ').pack(side=LEFT)
+        self.roiend = ttk.Entry(roiframe, width=4, validate='key',
+                                validatecommand=self.vcmd)
+        self.roiend.pack(side=LEFT)
+        ttk.Label(roiframe, text=' keV').pack(side=LEFT)
+        roiframe.grid(row=1, column=0, pady=3, padx=5)
+
+        scantypeframe = ttk.Frame(self)
+        ttk.Label(scantypeframe, text='Scan Type: ').pack(side=LEFT)
+        self.scantype = StringVar()
+        self.scantype.trace('w', self.change_scan_type)
+        scantypes = ['Single Spectrum', 'Linear Scan', 'Grid Scan']
+        scansel = ttk.Combobox(scantypeframe, values=scantypes, width=13,
+                               textvar=self.scantype, state='readonly')
+        scansel.bind('<<ComboboxSelected>>', lambda x: scansel.selection_clear())
+        scansel.pack(side=LEFT)
+        scantypeframe.grid(row=2, column=0, pady=5, padx=5)
+
+        self.curr_scan = ttk.Frame(self)
+        self.curr_scan.grid(row=3, column=0, pady=3, padx=5, sticky='nswe')
+        self.curr_scan.config(borderwidth=1, relief=SUNKEN)
+        self.curr_scan.rowconfigure(0, weight=1)
+        self.rowconfigure(3, minsize=115)
+        self.gridset = GridScanSettings(self.curr_scan)
+        self.linset = LinearScanSettings(self.curr_scan, self.sio)
+        self.specset = SpectrumSettings(self.curr_scan)
+        self.scantype.set('Single Spectrum')
+
+        buttonframe = ttk.Frame(self)
+        ttk.Button(buttonframe, text='Start', command=self.start_scan).pack(
+            side=LEFT)
+        ttk.Button(buttonframe, text='Stop', command=self.stop_scan).pack(
+            side=RIGHT)
+        buttonframe.grid(row=4, column=0, pady=3, padx=5)
+
+        self.columnconfigure(0, weight=1)
+        for r in (0,3,4):
+            self.rowconfigure(r, weight=1)
+
+    def change_scan_type(self, *args):
+        value = self.scantype.get()
+        for child in self.curr_scan.winfo_children():
+            child.grid_forget()
+        if value == 'Single Spectrum':
+            newscan = self.specset
+        elif value == 'Linear Scan':
+            newscan = self.linset
+        elif value == 'Grid Scan':
+            newscan = self.gridset
+        newscan.grid(row=0, column=0, pady=3, padx=5)
 
     def start_scan(self):
         pass
 
     def stop_scan(self):
         pass
-
-class SettingsFrame(ttk.Frame):
-    def __init__(self, parent, sio, **options):
-        ttk.Frame.__init__(self, parent, **options)
-        self.sio = sio
-        self.gridset = GridScanSettings(self)
-        self.linset = LinearScanSettings(self, self.sio)
-        self.specset = SpectrumSettings(self)
-        self.make_widgets()
-        
-    def make_widgets(self):
-        
-        scanframe = ttk.Frame(self)
-        
-
     
