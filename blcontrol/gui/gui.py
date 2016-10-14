@@ -40,7 +40,9 @@ class BeamlineGUI(Tk):
 
     def terminate(self):
         """Cancel all queue-checking loops before closing window"""
+        ### should have an 'are you sure' dialog?
         self.motorwidget.cancel_loops()
+        self.det.disable_mca()
         self.destroy()
 
     def report_callback_exception(self, *args):

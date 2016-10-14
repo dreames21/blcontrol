@@ -5,13 +5,15 @@ import time
 
 from blcontrol.utils import cen_fwhm, com
 
-class Spectrum(ScanData):
-    def __init__(self, cts, energies, settings):
+#TODO: write export for gridscan
+
+class Spectrum(object):
+    def __init__(self, cts, energies, status, timestamp):
         self.counts = cts
         self.energies = energies
-        self.settings = settings
-        self.status = None
-        super(Spectrum, self).__init__()
+        self.settings = None
+        self.status = status
+        self.timestamp = timestamp
 
     def total_count(self):
         return sum(self.counts)
@@ -69,12 +71,12 @@ class Spectrum(ScanData):
         return peakloc, maximum
 
 
-class LinearScan(ScanData):
-    def __init__(self, locations, spectra, motorname):
+class LinearScan(object):
+    def __init__(self, locations, spectra, motorname, timestamp):
         self.locations = locations
         self.spectra = spectra
         self.motorname = motorname
-        super(LinearScan, self).__init__()
+        self.timestamp = timestamp
 
     def export(self, filename):
         filename = os.path.expanduser(filename)
@@ -89,8 +91,8 @@ class LinearScan(ScanData):
                   '{:>20s}'.format('Locations:')+ '\n' + 
                   '{:>7s}'.format('keV') +
                   ''.join('{:>9}'.format(loc) for loc in self.locations))
-        status = self.spectra[0].status
-        settings = self.spectra[0].settings      
+        status = self.spectra[-1].status
+        settings = self.spectra[-1].settings      
         footer = '\nDetector status:\n'
         for key, value in status.iteritems():
             footer += '{0} = {1}\n'.format(key, value)
@@ -124,12 +126,12 @@ class LinearScan(ScanData):
         return peakloc, maximum
 
 
-class GridScan(ScanData):
-    def __init__(self, xlocs, ylocs, spectra):
+class GridScan(object):
+    def __init__(self, xlocs, ylocs, spectra, timestamp):
         self.xlocs = xlocs
         self.ylocs = ylocs
         self.spectra = spectra
-        super(GridScan, self).__init__()
+        self.timestamp = timestamp
 
     def counts(self):
         M, N = np.shape(self.spectra)

@@ -1,4 +1,4 @@
-## needs to be tested with a detector
+## needs to be tested with a real detector
 
 """ This module defines classes for interacting with an Amptek DP5 device.
 
@@ -11,6 +11,8 @@ from blcontrol.detector import pids
 from blcontrol.utils import add16b, byte2int
 from blcontrol.detector.exceptions import (DeviceError, TimeoutError,
                                      UnexpectedReplyError, ChecksumError)
+
+#TODO: write method to request all detector settings
 
 class DP5Device(object):
     """A class representing a DP5 device.

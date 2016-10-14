@@ -77,7 +77,7 @@ class LinearScanSettings(FloatValFrame):
 
     def get_scan_params(self):
         return {'type'     : 'linear',
-                'motorname': self.motoranme.get(),
+                'motorname': self.motorname.get(),
                 'acctime'  : float(self.acctime.get()),
                 'stepsize' : float(self.stepsize.get()),
                 'start'    : float(self.start.get()),
@@ -191,13 +191,15 @@ class SettingsFrame(FloatValFrame):
         self.make_widgets()
         
     def make_widgets(self):
-        title = ttk.Label(self, text='Scan Settings', font='TkHeadingFont', anchor=CENTER)
+        title = ttk.Label(self, text='Scan Settings', font='TkHeadingFont',
+                          anchor=CENTER)
         title.grid(row=0, column=0, pady=7, sticky=W+E)
 
         nameframe = ttk.Frame(self)
-        ttk.Label(nameframe, text='Sample Name: ').grid(row=0, column=0, pady=3)
+        ttk.Label(nameframe, text='Sample Name: ').grid(row=0, column=0, pady=3,
+                  padx=(5,0))
         self.samplename = ttk.Entry(nameframe)
-        self.samplename.grid(row=0, column=1, columnspan=4)
+        self.samplename.grid(row=0, column=1, columnspan=4, padx=(0,5))
         ttk.Label(nameframe, text='ROI: ').grid(row=1, column=0, sticky=E)
         self.roistart = ttk.Entry(nameframe, width=5, validate='key',
                                   validatecommand=self.vcmd)

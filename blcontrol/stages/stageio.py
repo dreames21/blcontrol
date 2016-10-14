@@ -5,7 +5,9 @@ import serial.tools.list_ports
 import threading
 import time
 import zaber.serial as zb
+
 import blcontrol.stages.commands as com
+from blcontrol.utils import SingleValQueue
 
 class StageIO(object):
     """Class for communication with motors.
@@ -140,7 +142,7 @@ class Motor(object):
         self.sernum = sernum
         self._zeropos = 0
         self.reply_queue = Queue.Queue()
-        self.pos_queue = Queue.Queue(maxsize=1)
+        self.pos_queue = SingleValQueue()
         self.resolution = None
     
     def send(self, commandnum, data=0):
@@ -185,7 +187,8 @@ class Motor(object):
         reply = self.reply_queue.get()
         if commandnum is not None:
             while (reply.command_number != commandnum):
-                reply = self.reply_queue.get(self.port.timeout)
+                reply = self.reply_queue.get()
+        return reply
             
     def stepdata2pos(self, stepdata):
         """Converts steps to real units based on resolution and zero position."""
@@ -212,8 +215,8 @@ class Motor(object):
 
     def finish_move(self):
         """Returns position when motor has finished moving."""
-        stepdata = self.get_reply_notimeout(com.MVABS)
-        return stepdata2pos(stepdata)
+        stepdata = self.get_reply_notimeout(com.MVABS).data
+        return self.stepdata2pos(stepdata)
 
     def get_status(self):
         """Returns a string summarizing the status of the motor."""
@@ -287,11 +290,10 @@ class SerialPortReader(threading.Thread):
             reply = self._read()
             if reply is not None:
                 motor_num = reply.device_number
+                #print str(reply.command_number) + ' ; ' + str(reply.data)
                 if reply.command_number in (com.MTRACK, com.MANMTRACK,
                                             com.MANMV, com.POS, com.MVABS,
                                             com.STOP):
-                    if self.pos_queues[motor_num].full():
-                        self.pos_queues[motor_num].get()
                     self.pos_queues[motor_num].put(reply.data)
                 if reply.command_number not in (com.MTRACK, com.MANMTRACK,
                                                 com.MANMV, com.ERROR):

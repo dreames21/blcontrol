@@ -1,6 +1,7 @@
 import ConfigParser
 import numpy as np
 import os
+import Queue
 from scipy import interpolate, optimize
 import struct
 
@@ -59,7 +60,7 @@ def load_conf_file(conf_path='~/.blconf'):
 
 def cen_fwhm(xdata, ydata):
     xdata = np.array(xdata)
-    ydata = np.array(ydata)
+    ydata = np.array(ydata, dtype=float)
     assert len(xdata) == len(ydata)
     ydata -= min(ydata)
     max_y = max(ydata)
@@ -89,6 +90,7 @@ def cen_fwhm(xdata, ydata):
     cen = (hm_right + hm_left)/2.
     return cen, fw
 
+
 def com(array, xvals, yvals):
     array -= array.min()
     try:
@@ -105,3 +107,13 @@ def com(array, xvals, yvals):
     except ZeroDivisionError:
         ycom = 0.5*(yvals[0] + yvals[-1])
     return (xcom, ycom)
+
+
+class SingleValQueue(Queue.Queue):
+    def __init__(self):
+        Queue.Queue.__init__(self, maxsize=1)
+
+    def put(self, item):
+        if self.full():
+            self.get()
+        Queue.Queue.put(self, item)

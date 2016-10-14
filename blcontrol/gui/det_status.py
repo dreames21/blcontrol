@@ -70,7 +70,7 @@ class DetectorStatus(ttk.Frame):
             status['detector temperature (K)']) + ' K')
         self.variables['Board Temp'].set(str(status['board temperature (C)']) +
                                          ' C')
-        self.refreshjob = self.after(500, self.refresh_status)
+        self.statusloop = self.after(500, self.refresh_status)
 
     def refresh_settings(self):
         """Updates the value of certain detector settings."""
@@ -84,7 +84,9 @@ class DetectorStatus(ttk.Frame):
         self.variables['Gain'].set(values[4])
         self.variables['Peaking Time'].set(values[5] + ' us')
         self.variables['Set Point'].set(values[6] + ' K')
+        self.settingsloop = self.after(1000, self.refresh_settings)
 
     def cancel_loops(self):
         """Cancels refresh loop so application can exit gracefully."""
-        self.after_cancel(self.refreshjob)
+        self.after_cancel(self.statusloop)
+        self.after_cancel(self.settingsloop)
