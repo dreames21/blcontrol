@@ -103,13 +103,13 @@ class LinearScan(object):
                    delimiter='')
 
     def counts(self):
-        return [spectrum.total_count for spectrum in self.spectra]
+        return [spectrum.total_count() for spectrum in self.spectra]
 
     def roi_counts(self, roi):
         return [spectrum.roi_total_count(roi) for spectrum in self.spectra]
 
     def cen_fwhm(self):
-        return cen_fwhm(self.locations, self.counts)
+        return cen_fwhm(self.locations, self.counts())
 
     def cen_fwhm_roi(self, roi):
         return cen_fwhm(self.locations, self.roi_counts(roi))

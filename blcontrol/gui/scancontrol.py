@@ -61,6 +61,7 @@ class ScanController(ttk.Frame):
         if self.stopper.is_set():
             self.settings.startbutt.config(state=NORMAL)
             self.specplot.stop_plot()
+            self.scanplot.stop_plot()
         else:
             self.checker = self.after(1000, self.check_is_running)
         
@@ -95,9 +96,9 @@ class ScanController(ttk.Frame):
         self.stopper = thread.stopper
         thread.start()
         self.specplot.plot(thread.specqueue, params['roi'])
-        self.scanplot.plot(thread.plotqueue, params['roi'])
-
-       
+        unit = self.settings.linset.stepunit.get().strip()
+        self.scanplot.pre_plot_lin(locs, params['samplename'], unit)
+        self.scanplot.plot_lin(thread.plotqueue, params['roi'])
         
 
     def start_grid_scan(self, params):
@@ -130,7 +131,6 @@ class SpectrumAcqThread(threading.Thread):
             time.sleep(0.5)
 
     def get_final_value(self):
-        print 'waiting for final spectrum'
         self.finished.wait()
         return self.spec
 
@@ -156,7 +156,6 @@ class LinearScanThread(threading.Thread):
                                                self.specqueue)
                 specthread.start()
                 spectrum = specthread.get_final_value()
-                print 'got final spectrum'
                 self.scan_data.locations.append(l)
                 self.scan_data.spectra.append(spectrum)
                 self.plotqueue.put(copy.deepcopy(self.scan_data))

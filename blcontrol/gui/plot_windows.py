@@ -29,7 +29,7 @@ class SpectrumDisplay(ttk.Frame):
         try:
             spectrum = specqueue.get_nowait()
         except Queue.Empty:
-            self.plotloop = self.after(250, lambda: self.plot(specqueue, roi))
+            self.plotloop = self.after(50, lambda: self.plot(specqueue, roi))
             return
         for thing in self.plot_objs:
             if thing:
@@ -72,12 +72,43 @@ class ScanDisplay(ttk.Frame):
         ttk.Frame.__init__(self, parent, **options)
         self.make_widgets()
         self.plotloop = None
+        self.plot_objs = [None, None, None, None]
+        self.ax = None
 
     def make_widgets(self):
         self.figure = Figure(figsize=(10,5))
-        canvas = FigureCanvasTkAgg(self.figure, master=self)
-        canvas.show()
-        canvas.get_tk_widget().pack(side=TOP, fill=BOTH, expand=1)
+        self.canvas = FigureCanvasTkAgg(self.figure, master=self)
+        self.canvas.show()
+        self.canvas.get_tk_widget().pack(side=TOP, fill=BOTH, expand=1)
 
-    def plot(self, plotqueue, roi):
-        pass
+    def pre_plot_lin(self, locs, samplename, unit):
+        self.figure.clf()
+        self.ax = self.figure.add_subplot(111)
+        self.ax.set_xlim(min(locs), max(locs))
+        self.ax.set_title(samplename)
+        self.ax.set_xlabel('Location ({0})'.format(unit))
+        self.ax.set_ylabel('Counts')
+        self.canvas.show()
+
+    def plot_lin(self, scanqueue, roi):
+        try:
+            scan = scanqueue.get_nowait()
+        except Queue.Empty:
+            self.plotloop = self.after(500, lambda: self.plot_lin(scanqueue, roi))
+            return
+        for thing in self.plot_objs:
+            if thing:
+                thing.remove()
+        self.plot_objs[0], = self.ax.plot(scan.locations, scan.counts(), '.-g')
+        if roi:
+            self.plot_objs[2], = self.ax.plot(scan.locations,
+                scan.roi_counts(roi), '.-b')
+        self.canvas.show()
+        self.plotloop = self.after(500, lambda: self.plot_lin(scanqueue, roi))
+        #TODO: add peak/fwhm labels
+        
+
+    def stop_plot(self):
+        if self.plotloop:
+            self.after_cancel(self.plotloop)
+        self.plotloop = None
