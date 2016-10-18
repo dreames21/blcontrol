@@ -26,10 +26,8 @@ class Spectrum(object):
                 the beginning and end of the region of interest.
         """
         start, end = roi
-        energies = self.energies
-        data = self.counts
-        return [data[i] for i in range(len(data))
-                if energies[i] >= start and energies[i] <= end]
+        return [self.counts[i] for i in range(len(self.counts))
+                if self.energies[i] >= start and self.energies[i] <= end]
 
     def roi_energies(self, roi):
         start, end = roi
@@ -102,6 +100,7 @@ class LinearScan(object):
         np.savetxt(filename, outarr.T, fmt='%9s', header=header, footer=footer,
                    delimiter='')
 
+    @property
     def counts(self):
         return [spectrum.total_count() for spectrum in self.spectra]
 
@@ -109,14 +108,14 @@ class LinearScan(object):
         return [spectrum.roi_total_count(roi) for spectrum in self.spectra]
 
     def cen_fwhm(self):
-        return cen_fwhm(self.locations, self.counts())
+        return cen_fwhm(self.locations, self.counts)
 
     def cen_fwhm_roi(self, roi):
         return cen_fwhm(self.locations, self.roi_counts(roi))
 
     def peakloc_max(self):
         maximum = max(self.counts)
-        peakloc = self.locations[self.counts().index(maximum)]
+        peakloc = self.locations[self.counts.index(maximum)]
         return peakloc, maximum
 
     def peakloc_max_roi(self, roi):

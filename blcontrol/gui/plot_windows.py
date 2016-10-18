@@ -73,16 +73,19 @@ class ScanDisplay(ttk.Frame):
         self.make_widgets()
         self.plotloop = None
         self.plot_objs = [None, None, None, None]
-        self.ax = None
 
     def make_widgets(self):
         self.figure = Figure(figsize=(10,5))
         self.canvas = FigureCanvasTkAgg(self.figure, master=self)
-        self.canvas.show()
         self.canvas.get_tk_widget().pack(side=TOP, fill=BOTH, expand=1)
+        self.ax = self.figure.add_subplot(111)
+        self.ax.set_xlabel('Location')
+        self.ax.set_ylabel('Counts')
+        self.canvas.show()
 
     def pre_plot_lin(self, locs, samplename, unit):
         self.figure.clf()
+        self.plot_objs = [None, None, None, None]
         self.ax = self.figure.add_subplot(111)
         self.ax.set_xlim(min(locs), max(locs))
         self.ax.set_title(samplename)
@@ -99,13 +102,24 @@ class ScanDisplay(ttk.Frame):
         for thing in self.plot_objs:
             if thing:
                 thing.remove()
-        self.plot_objs[0], = self.ax.plot(scan.locations, scan.counts(), '.-g')
+        self.plot_objs[0], = self.ax.plot(scan.locations, scan.counts, '.-g')
+        if len(scan.counts) > 1:
+            tot_text = ("Total:\nPeak is {0[1]} @ {0[0]}\nFWHM is {1[1]:0.3f} @"
+                "{1[0]:0.3f}").format(scan.peakloc_max(), scan.cen_fwhm())
+            self.plot_objs[1] = self.ax.text(0.02, 0.98, tot_text,
+                transform=self.ax.transAxes, va="top", color='g')
         if roi:
             self.plot_objs[2], = self.ax.plot(scan.locations,
                 scan.roi_counts(roi), '.-b')
+            if len(scan.counts) > 2:
+                roi_text = ("ROI:\nPeak is {0[1]} @ {0[0]}\nFWHM is "
+                    "{1[1]:0.3f} @ {1[0]:0.3f}").format(
+                        scan.peakloc_max_roi(roi), scan.cen_fwhm_roi(roi))
+                self.plot_objs[3] = self.ax.text(0.5, 0.98, roi_text,
+                    transform=self.ax.transAxes, va="top", color='b')
+                self.ax.set_ylim(top=1.25*max(scan.counts))
         self.canvas.show()
         self.plotloop = self.after(500, lambda: self.plot_lin(scanqueue, roi))
-        #TODO: add peak/fwhm labels
         
 
     def stop_plot(self):
