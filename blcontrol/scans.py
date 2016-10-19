@@ -132,24 +132,31 @@ class GridScan(object):
         self.spectra = spectra
         self.timestamp = timestamp
 
+    @property
     def counts(self):
         M, N = np.shape(self.spectra)
-        cts = np.zeros((M,N))
+        cts = -1*np.ones((M,N))
         for i in range(M):
             for j in range(N):
                 if self.spectra[i,j]:
                     cts[i,j] = self.spectra[i,j].total_count()
+        return cts
 
     def roi_counts(self, roi):
         M, N = np.shape(self.spectra)
-        cts = np.zeros((M,N))
-        for i in range(M):
-            for j in range(N):
-                if self.spectra[i,j]:
-                    cts[i,j] = self.spectra[i,j].roi_total_count(roi)
+        cts = -1*np.ones((M,N))
+        if roi:
+            for i in range(M):
+                for j in range(N):
+                    if self.spectra[i,j]:
+                        cts[i,j] = self.spectra[i,j].roi_total_count(roi)
+        return cts
 
+    @property
     def cen(self):
-        return com(self.counts(), self.xlocs, self.ylocs)
+        counts_cl = np.clip(self.counts, 0, self.counts.max())
+        return com(counts_cl, self.xlocs, self.ylocs)
 
     def roi_cen(self, roi):
-        return com(self.roi_counts(roi), self.xlocs, self.ylocs)
+        counts_cl = np.clip(self.roi_counts(roi), 0, self.roi_counts(roi).max())
+        return com(counts_cl, self.xlocs, self.ylocs)

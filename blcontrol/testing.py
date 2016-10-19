@@ -1,3 +1,4 @@
+import numpy as np
 import random
 import threading
 
@@ -5,6 +6,7 @@ class FakeDet(object):
     """Representation of a detector with dummy data for testing."""
     def __init__(self, *args):
         self.mca = False
+        self.spectrum = 256*[0]
         
     def begin_acq(self, acqtime):
         self.mca = True
@@ -13,6 +15,7 @@ class FakeDet(object):
 
     def disable_mca(self):
         self.mca = False
+        self.spectrum = 256*[0]
     
     def get_status(self):
         return {'accumulation time': 30.0,
@@ -28,13 +31,16 @@ class FakeDet(object):
                 'GAIN=12.045', 'TPEA=3.200', 'TECS=220.0']
 
     def get_spectrum(self):
-        return [random.randint(0,5000) for _ in range(1024)], self.get_status()
+        new = [i + int(200*np.exp(-1*(i-50)**2) + 100*random.random())
+                for i in self.get_energies()]
+        self.spectrum = [self.spectrum[i] + n for i, n in enumerate(new)]
+        return self.spectrum, self.get_status()
 
     def chan2energy(self, chan):
-        return chan*0.1
+        return chan*0.3
 
     def set_setting(self, *args):
         pass
 
     def get_energies(self):
-        return [self.chan2energy(i) for i in range(1024)]
+        return [self.chan2energy(i) for i in range(256)]

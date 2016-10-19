@@ -256,6 +256,12 @@ class Motor(object):
         else:
             return None
 
+    @property
+    def pos(self):
+        self.send(com.POS)
+        stepdata = self.get_reply(com.POS).data
+        return self.stepdata2pos(stepdata)
+
 
 class SerialPortReader(threading.Thread):
     """A thread to monitor the serial port and parse input.

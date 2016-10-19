@@ -1,4 +1,5 @@
 import copy
+import numpy as np
 import Queue
 import sys
 import threading
@@ -60,10 +61,10 @@ class ScanController(ttk.Frame):
     def check_is_running(self):
         if self.stopper.is_set():
             self.settings.startbutt.config(state=NORMAL)
-            self.specplot.stop_plot()
-            self.scanplot.stop_plot()
+            self.after(500, self.specplot.stop_plot())
+            self.after(500, self.scanplot.stop_plot())
         else:
-            self.checker = self.after(1000, self.check_is_running)
+            self.checker = self.after(200, self.check_is_running)
         
     def start_spectrum_acq(self, params):
         num_chans = params['chans']
@@ -99,10 +100,33 @@ class ScanController(ttk.Frame):
         unit = self.settings.linset.stepunit.get().strip()
         self.scanplot.pre_plot_lin(locs, params['samplename'], unit)
         self.scanplot.plot_lin(thread.plotqueue, params['roi'])
-        
 
     def start_grid_scan(self, params):
-        pass
+        dx = self.sio.motors['dx']
+        dy = self.sio.motors['dy']
+        stepsize = params['stepsize']
+        gridsize = params['gridsize']
+        xlocs = [dx.pos - (gridsize-1)*stepsize/2.0 + i*stepsize for i in
+                 range(gridsize)]
+        ylocs = [dy.pos - (gridsize-1)*stepsize/2.0 + i*stepsize for i in
+                 range(gridsize)]
+        if not (dy.is_in_range(ylocs[0]) and dy.is_in_range(ylocs[-1])):
+            errmsg = "Scan outside of limits of travel of dy"
+            messagebox.showerror('Scan Limits', errmsg)
+            self.stopper.set()
+            return
+        if not (dx.is_in_range(xlocs[0]) and dx.is_in_range(xlocs[-1])):
+            errmsg = "Scan outside of limits of travel of dx"
+            messagebox.showerror('Scan Limits', errmsg)
+            self.stopper.set()
+            return
+        thread = GridScanThread(self.det, self.sio, xlocs, ylocs,
+                                params['acctime'])
+        self.stopper = thread.stopper
+        thread.start()
+        self.specplot.plot(thread.specqueue, params['roi'])
+        self.scanplot.pre_plot_grid(xlocs, ylocs)
+        self.scanplot.plot_grid(thread.plotqueue, params['roi'])
 
 
 class SpectrumAcqThread(threading.Thread):
@@ -134,6 +158,7 @@ class SpectrumAcqThread(threading.Thread):
         self.finished.wait()
         return self.spec
 
+
 class LinearScanThread(threading.Thread):
     def __init__(self, det, motor, acctime, locs):
         super(LinearScanThread, self).__init__()
@@ -144,10 +169,11 @@ class LinearScanThread(threading.Thread):
         self.stopper = threading.Event()
         self.plotqueue = Queue.Queue()
         self.specqueue = SingleValQueue()
-        self.scan_data = LinearScan([], [], self.motor.name, time.asctime())
+        self.scan_data = None
         self.daemon = True
 
     def run(self):
+        self.scan_data = LinearScan([], [], self.motor.name, time.asctime())
         for l in self.locs:
             if not self.stopper.is_set():
                 self.motor.start_move(l)
@@ -164,4 +190,48 @@ class LinearScanThread(threading.Thread):
     def get_final_value(self):
         self.stopper.wait()
         return self.scan_data
-            
+
+
+class GridScanThread(threading.Thread):
+    def __init__(self, det, sio, xlocs, ylocs, acctime):
+        self.det = det
+        self.acctime = acctime
+        self.xlocs = xlocs
+        self.ylocs = ylocs
+        self.dx = sio.motors['dx']
+        self.dy = sio.motors['dy']
+        self.stopper = threading.Event()
+        self.plotqueue = Queue.Queue()
+        self.specqueue = SingleValQueue()
+        spectra = np.empty((len(xlocs), len(ylocs)), dtype=object)
+        self.scan_data = GridScan(xlocs, ylocs, spectra, time.asctime())
+        super(GridScanThread, self).__init__()
+        self.daemon = True
+
+    def run(self):
+        spectra = np.empty((len(self.xlocs), len(self.ylocs)), dtype=object)
+        self.scan_data = GridScan(self.xlocs, self.ylocs, spectra,
+                                  time.asctime())
+        xlocscopy = list(self.xlocs)
+        self.plotqueue.put(copy.deepcopy(self.scan_data))
+        for y in self.ylocs:
+            for x in xlocscopy:
+                if not self.stopper.is_set():
+                    self.dy.start_move(y)
+                    self.dx.start_move(x)
+                    self.dy.finish_move()
+                    self.dx.finish_move()
+                    specthread = SpectrumAcqThread(self.det, self.acctime,
+                                                   self.specqueue)
+                    specthread.start()
+                    spectrum = specthread.get_final_value()
+                    i, j = self.xlocs.index(x), self.ylocs.index(y)
+                    self.scan_data.spectra[i, j] = spectrum
+                    self.plotqueue.put(copy.deepcopy(self.scan_data))
+            xlocscopy.reverse()
+        time.sleep(0.25)
+        self.stopper.set()
+        
+    def get_final_value(self):
+        self.stopper.wait()
+        return self.scan_data

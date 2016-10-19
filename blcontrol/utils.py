@@ -95,14 +95,14 @@ def com(array, xvals, yvals):
     array -= array.min()
     try:
         xcounts = array.sum(1).tolist()
-        xmoms = [xcounts[i]*value for i, value in enumerate(xcounts)]
+        xmoms = [xcounts[i]*value for i, value in enumerate(xvals)]
         xcom = sum(xmoms)/sum(xcounts)
     except ZeroDivisionError:
         ## if there are no counts then return the geometric center
         xcom = 0.5*(xvals[0] + xvals[-1])
     try:
         ycounts = array.sum(0).tolist()
-        ymoms = [ycounts[i]*value for i, value in enumerate(ycounts)]
+        ymoms = [ycounts[i]*value for i, value in enumerate(yvals)]
         ycom = sum(ymoms)/sum(ycounts)
     except ZeroDivisionError:
         ycom = 0.5*(yvals[0] + yvals[-1])
