@@ -210,13 +210,11 @@ class Motor(object):
                     and (position + self._zeropos <= self.travel)))
 
     def start_move(self, position):
+        #TODO: update this
         """Signals the motor to begin moving to `position`."""
-        self.send(com.MVABS, self.pos2stepdata(position))
-
-    def finish_move(self):
-        """Returns position when motor has finished moving."""
-        stepdata = self.get_reply_notimeout(com.MVABS).data
-        return self.stepdata2pos(stepdata)
+        thread = MoveThread(self, position)
+        thread.start()
+        return thread
 
     def get_status(self):
         """Returns a string summarizing the status of the motor."""
@@ -307,6 +305,22 @@ class SerialPortReader(threading.Thread):
                 if reply.command_number == com.ERROR:
                     self.error_queue.put(reply)
 
+
+class MoveThread(threading.Thread):
+    def __init__(self, motor, destination):
+        super(MoveThread, self).__init__()
+        self.daemon = True
+        self.motor = motor
+        self.destination = destination
+
+    def run(self):
+        reply_com = None
+        step_dest = self.motor.pos2stepdata(self.destination)
+        self.motor.send(com.MVABS, step_dest)
+        while reply_com not in (com.MVABS, com.STOP):
+            reply = self.motor.get_reply_notimeout()
+            reply_com = reply.command_number
+        
 
 class TimeoutError(Exception):
     """Exception raised when a reply is not received before port timeout."""

@@ -239,7 +239,9 @@ class SettingsFrame(FloatValFrame):
         self.startbutt = ttk.Button(buttons, text='Start', state=DISABLED)
         self.startbutt.pack(side=LEFT, expand=1)
         self.stopbutt = ttk.Button(buttons, text='Stop')
-        self.stopbutt.pack(side=RIGHT, expand=1)
+        self.stopbutt.pack(side=LEFT, expand=1)
+        self.savebutt = ttk.Button(buttons, text='Save Scan')
+        self.savebutt.pack(side=RIGHT, expand=1)
         buttons.grid(column=0, row=5, pady=3, padx=5, sticky='nswe')
 
         self.columnconfigure(0, weight=1)

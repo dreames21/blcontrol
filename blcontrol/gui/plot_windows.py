@@ -56,6 +56,7 @@ class SpectrumDisplay(ttk.Frame):
             self.plot_objs[3] = self.ax.text(0.52, 0.98, roi_text, color='b',
                 transform=self.ax.transAxes, va="top")
         self.canvas.show()
+        specqueue.task_done()
         self.plotloop = self.after(250, lambda: self.plot(specqueue, roi))
 
     def stop_plot(self):
@@ -86,7 +87,8 @@ class ScanDisplay(ttk.Frame):
             thing.remove()
         self.plot_objs = []
         for cax in self.caxes:
-            cax.cla()
+            if cax:
+                cax.cla()
 
     def make_widgets(self):
         self.figure = Figure(figsize=(15,5))
@@ -110,6 +112,7 @@ class ScanDisplay(ttk.Frame):
     def plot_lin(self, scanqueue, roi):
         try:
             scan = scanqueue.get_nowait()
+            print 'got data to plot'
         except Queue.Empty:
             self.plotloop = self.after(100, lambda: self.plot_lin(scanqueue, roi))
             return
@@ -130,8 +133,10 @@ class ScanDisplay(ttk.Frame):
                         scan.peakloc_max_roi(roi), scan.cen_fwhm_roi(roi))
                 self.plot_objs.append(self.axes[0].text(0.5, 0.98, roi_text,
                     transform=self.axes[0].transAxes, va="top", color='b'))
-                self.axes[0].set_ylim(top=1.25*max(scan.counts))
+        self.axes[0].set_ylim(top=1.25*max(scan.counts))
         self.canvas.show()
+        scanqueue.task_done()
+        print 'plotted data'
         self.plotloop = self.after(100, lambda: self.plot_lin(scanqueue, roi))
 
     def pre_plot_grid(self, xlocs, ylocs):
@@ -198,8 +203,8 @@ class ScanDisplay(ttk.Frame):
         with warnings.catch_warnings():
             warnings.simplefilter('ignore')
             self.canvas.show()
+        scanqueue.task_done()
         self.plotloop = self.after(100, lambda: self.plot_grid(scanqueue, roi))
-        
         
     def stop_plot(self):
         if self.plotloop:

@@ -1,8 +1,5 @@
 import numpy as np
 import os
-import threading
-import time
-
 from blcontrol.utils import cen_fwhm, com
 
 #TODO: write export for gridscan
@@ -14,6 +11,7 @@ class Spectrum(object):
         self.settings = None
         self.status = status
         self.timestamp = timestamp
+        self.samplename = None
 
     def total_count(self):
         return sum(self.counts)
@@ -37,12 +35,14 @@ class Spectrum(object):
         return sum(self.roi_counts(roi))
 
     def export(self, filename):
-        filename = os.path.expanduser(filename)
         outarr = np.array([self.energies, self.counts]).T
+        if self.samplename:
+            samp = self.samplename
+        else:
+            samp = ''
         header = (os.path.abspath(filename) + '\n' +
                   'MCA Spectrum ' + self.timestamp + '\n' +
-                  self.samplename + '\n\n' +
-                  'keV       cts')
+                  samp + '\n\nkeV       cts')
         footer = '\nDetector status:\n'
         for key, value in self.status.iteritems():
             footer += '{0} = {1}\n'.format(key, value)
@@ -75,18 +75,21 @@ class LinearScan(object):
         self.spectra = spectra
         self.motorname = motorname
         self.timestamp = timestamp
+        self.samplename = None
 
     def export(self, filename):
-        filename = os.path.expanduser(filename)
         energycol = np.append(self.spectra[0].energies, 'Total')
         outarr = [energycol]
         for spectrum in self.spectra:
             column = [np.append((spectrum.counts), spectrum.total_count())]
             outarr = np.append(outarr, column, axis=0)
+        if self.samplename:
+            samp = self.samplename
+        else:
+            samp = ''
         header = (os.path.abspath(filename) +'\n'+
-                  'Linear Scan of ' +self. motorname +' '+ self.timestamp +'\n'+
-                  self.samplename + '\n\n' +
-                  '{:>20s}'.format('Locations:')+ '\n' + 
+                  'Linear Scan of ' +self.motorname +' '+ self.timestamp +'\n'+
+                  samp + '\n\n' + '{:>20s}'.format('Locations:')+ '\n' + 
                   '{:>7s}'.format('keV') +
                   ''.join('{:>9}'.format(loc) for loc in self.locations))
         status = self.spectra[-1].status
@@ -131,6 +134,7 @@ class GridScan(object):
         self.ylocs = ylocs
         self.spectra = spectra
         self.timestamp = timestamp
+        self.samplename = None
 
     @property
     def counts(self):
