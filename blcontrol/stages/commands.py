@@ -66,3 +66,35 @@ STATUSDICT = {
     65  : "Parked",
     78  : "Moving to index"
 }
+
+### Settings to be set or printed by a settings import/export.
+### See DP5 Programmer's Guide, sec 7, for the meaning of these settings.
+SETTINGS_LIST = [
+    # Order 2:
+    'CLKL',
+    # Order 3:
+    'TPEA',
+    # Order 4:
+    'GAIF', 'GAIN', 'PURE', 'RESL', 'TFLA', 'TPFA',
+    # Order 5:
+    'RTDE',
+    # Order 6:
+    'MCAS',
+    # No order:
+    'AINP', 'AUO1', 'AUO2', 'BLRD', 'BLRM', 'BLRU', 'BOOT', 'CLCK',
+    'CUSP', 'DACF', 'DACO', 'GAIA', 'GATE', 'GPED', 'GPGA', 'GPIN',
+    'GPMC', 'GPME', 'HVSE', 'INOF', 'MCAC', 'MCAE', 'MCSL', 'MCSH',
+    'MCST', 'PAPS', 'PDMD', 'PRCL', 'PRCH', 'PREC', 'PRER', 'PRET',
+    'RTDT', 'SCAW', 'SCOE', 'SCOG', 'SCOT', 'SOFF', 'SYNC', 'TECS',
+    'THFA', 'THSL', 'TLLD', 'TPMO'
+    ]
+
+## Settings related to the risetime discrimination.
+## These settings can only be set if risetime discrimination is enabled.
+RTD_SETTINGS = ['RTDW', 'RTDD', 'RTDS']
+
+SCA_INDEX = "SCAI"
+SCA_OUTPUT = "SCAO"   ### SCA output, only for SCAs 1-8
+
+### Settings related to SCAs 1-16.
+SCA_SETTINGS16 = ['SCAH', 'SCAL']

@@ -4,7 +4,6 @@ import threading
 import time
 import Queue
 from blcontrol.scan_data import Spectrum, LinearScan, GridScan
-from blcontrol.utils import SingleValQueue
 
 class SpectrumAcqThread(threading.Thread):
     def __init__(self, det, acctime, plotqueue):
@@ -13,7 +12,6 @@ class SpectrumAcqThread(threading.Thread):
         self.acctime = acctime
         self.plotqueue = plotqueue
         self.data = Spectrum([], self.det.get_energies(), {}, '')
-        self.finished = threading.Event()
         self.daemon = True
 
     def run(self):
@@ -24,13 +22,11 @@ class SpectrumAcqThread(threading.Thread):
             self.data.counts, self.data.status = self.det.get_spectrum()
             mca_enabled = self.data.status['MCA enabled']
             if not mca_enabled:
-                # TODO: change how spectrum thread gets detector settings
-                settings = self.det.get_setting(['PRET', 'MCAC', 'THSL', 'THFA',
-                    'GAIN', 'TPEA', 'TECS'])
-                self.data.settings = settings
-                self.finished.set()
+                self.data.settings = self.det.get_settings_dict()
             self.plotqueue.put(copy.deepcopy(self.data))
+            print 'put spec'
             time.sleep(0.5)
+        self.plotqueue.join()
 
     def stop(self):
         self.det.disable_mca()
@@ -45,7 +41,7 @@ class LinearScanThread(threading.Thread):
         self.locs = locs
         self.stopper = threading.Event()
         self.plotqueue = Queue.Queue()
-        self.specqueue = SingleValQueue()
+        self.specqueue = Queue.Queue()
         self.data = None
         self.daemon = True
 
@@ -53,7 +49,7 @@ class LinearScanThread(threading.Thread):
         self.data = LinearScan([], [], self.motor.name, time.asctime())
         for l in self.locs:
             if self.stopper.is_set():
-                return
+                break
             else:
                 mv_thread = self.motor.start_move(l)
                 mv_thread.join()
@@ -65,7 +61,7 @@ class LinearScanThread(threading.Thread):
                 self.data.locations.append(l)
                 self.data.spectra.append(spectrum)
                 self.plotqueue.put(copy.deepcopy(self.data))
-                print 'put in queue'
+        self.plotqueue.join()
 
     def stop(self):
         self.stopper.set()
@@ -82,7 +78,7 @@ class GridScanThread(threading.Thread):
         self.dy = sio.motors['dy']
         self.stopper = threading.Event()
         self.plotqueue = Queue.Queue()
-        self.specqueue = SingleValQueue()
+        self.specqueue = Queue.Queue()
         spectra = np.empty((len(xlocs), len(ylocs)), dtype=object)
         self.data = GridScan(xlocs, ylocs, spectra, time.asctime())
         super(GridScanThread, self).__init__()
@@ -110,6 +106,7 @@ class GridScanThread(threading.Thread):
                     self.data.spectra[i, j] = spectrum
                     self.plotqueue.put(copy.deepcopy(self.data))
             xlocscopy.reverse()
+        self.plotqueue.join()
 
     def stop(self):
         self.stopper.set()
