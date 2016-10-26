@@ -1,6 +1,5 @@
+import Queue
 import sys
-import threading
-import time
 if sys.version_info[0] < 3:
     from Tkinter import * #pylint: disable=wildcard-import, unused-wildcard-import
     import tkFileDialog as filedialog
@@ -14,9 +13,8 @@ from blcontrol.scan_threads import (SpectrumAcqThread, LinearScanThread,
     GridScanThread)
 from blcontrol.utils import SingleValQueue
 
-#TODO: -implement saving data to a file
-#      -implement dialog to edit detector settings (and maybe other settings?
-#           like number of mca chans used in a linear/grid scan?)
+#TODO: implement dialog to edit detector settings (and maybe other settings?
+#   like number of mca chans used in a linear/grid scan?)
 
 class ScanController(ttk.Frame):
     def __init__(self, parent, det, sio, **options):
@@ -26,7 +24,6 @@ class ScanController(ttk.Frame):
         self.last_scan = None
         self.savequeue = SingleValQueue()
         self.make_widgets()
-        self.check_is_running()
 
     def make_widgets(self):
         self.scanplot = ScanDisplay(self)
@@ -51,13 +48,11 @@ class ScanController(ttk.Frame):
             self.start_grid_scan(params)
         self.settings.startbutt.config(state=DISABLED)
         self.settings.savebutt.config(state=DISABLED)
-        self.check_is_running()
 
     def stop_scan(self):
         self.sio.stop_all()
         if self.last_scan:
             self.last_scan.stop()
-            self.last_scan.join()
         self.det.disable_mca()
 
     def save_scan(self):
@@ -67,14 +62,14 @@ class ScanController(ttk.Frame):
         data.export(filename)
 
     def check_is_running(self):
-        if self.last_scan:
-            if not self.last_scan.is_alive():
-                self.last_scan.plotqueue.join()
-                self.settings.startbutt.config(state=NORMAL)
-                self.settings.savebutt.config(state=NORMAL)
-                self.specplot.stop_plot()
-                self.scanplot.stop_plot()
-        self.checker = self.after(200, self.check_is_running)
+        if self.last_scan.is_alive():
+            self.checker = self.after(200, self.check_is_running)
+        else:
+            self.settings.startbutt.config(state=NORMAL)
+            self.settings.savebutt.config(state=NORMAL)
+            self.specplot.stop_plot()
+            self.scanplot.stop_plot()
+            self.after_cancel(self.checker)
 
     def start_spectrum_acq(self, params):
         num_chans = params['chans']
@@ -83,11 +78,12 @@ class ScanController(ttk.Frame):
         self.specplot.ax.set_title(samplename)
         acctime = params['acctime']
         roi = params['roi']
-        specqueue = SingleValQueue()
+        specqueue = Queue.Queue()
         thread = SpectrumAcqThread(self.det, acctime, specqueue)
         self.last_scan = thread
         thread.start()
         self.specplot.plot(specqueue, roi)
+        self.check_is_running()
 
     def start_linear_scan(self, params):
         self.det.set_setting('MCAC', 256)
@@ -110,6 +106,7 @@ class ScanController(ttk.Frame):
         unit = self.settings.linset.stepunit.get().strip()
         self.scanplot.pre_plot_lin(locs, params['samplename'], unit)
         self.scanplot.plot_lin(thread.plotqueue, params['roi'])
+        self.check_is_running()
 
     def start_grid_scan(self, params):
         dx = self.sio.motors['dx']
@@ -135,5 +132,6 @@ class ScanController(ttk.Frame):
         self.specplot.plot(thread.specqueue, params['roi'])
         self.scanplot.pre_plot_grid(xlocs, ylocs)
         self.scanplot.plot_grid(thread.plotqueue, params['roi'])
+        self.check_is_running()
 
 

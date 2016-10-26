@@ -2,8 +2,6 @@ import numpy as np
 import os
 from blcontrol.utils import cen_fwhm, com
 
-#TODO: write export for gridscan
-
 class Spectrum(object):
     def __init__(self, cts, energies, status, timestamp):
         self.counts = cts
@@ -78,22 +76,22 @@ class LinearScan(object):
         self.samplename = None
 
     def export(self, filename):
-        energycol = np.append(self.spectra[0].energies, 'Total')
-        outarr = [energycol]
-        for spectrum in self.spectra:
-            column = [np.append((spectrum.counts), spectrum.total_count())]
-            outarr = np.append(outarr, column, axis=0)
+        energycol = self.spectra[0].energies
+        outarr = np.array([energycol])
         if self.samplename:
             samp = self.samplename
         else:
             samp = ''
-        header = (os.path.abspath(filename) +'\n'+
-                  'Linear Scan of ' +self.motorname +' '+ self.timestamp +'\n'+
-                  samp + '\n\n' + '{:>20s}'.format('Locations:')+ '\n' + 
-                  '{:>7s}'.format('keV') +
-                  ''.join('{:>9}'.format(loc) for loc in self.locations))
+        metadata = (os.path.abspath(filename) +'\n'+ 'Linear Scan of ' +
+                    self.motorname +' '+ self.timestamp +'\n'+ samp + '\n')
+        locline = 'Locations: '
+        for i, x in enumerate(self.locations):
+            locline += '{0:0.3f} '.format(x)
+            spectrum = np.array([self.spectra[i].counts])
+            outarr = np.append(outarr, spectrum, axis=0)
         status = self.spectra[-1].status
-        settings = self.spectra[-1].settings      
+        settings = self.spectra[-1].settings
+        header = metadata + locline + '\n' + 'keV\tcounts'
         footer = '\nDetector status:\n'
         for key, value in status.iteritems():
             footer += '{0} = {1}\n'.format(key, value)
@@ -164,3 +162,31 @@ class GridScan(object):
     def roi_cen(self, roi):
         counts_cl = np.clip(self.roi_counts(roi), 0, self.roi_counts(roi).max())
         return com(counts_cl, self.xlocs, self.ylocs)
+
+    def export(self, filename):
+        energycol = self.spectra[0,0].energies
+        outarr = np.array([energycol])
+        if self.samplename:
+            samp = self.samplename
+        else:
+            samp = ''
+        metadata = (os.path.abspath(filename) +'\n'+ 'Grid scan dx, dy' +' '+
+                  self.timestamp +'\n'+ samp + '\n')
+        locline = 'Locations: ' 
+        for i, x in enumerate(self.xlocs):
+            for j, y in enumerate(self.ylocs):
+                locline += '({0:0.3f}, {1:0.3f}) '.format(x,y)
+                spectrum = np.array([self.spectra[i,j].counts])
+                outarr = np.append(outarr, spectrum, axis=0)
+        header = metadata + locline + '\n' + 'keV\tcounts'
+        status = self.spectra[-1,-1].status
+        settings = self.spectra[-1,-1].settings
+        footer = '\nDetector status:\n'
+        for key, value in status.iteritems():
+            footer += '{0} = {1}\n'.format(key, value)
+        footer += '\nDetector settings:\n'
+        for key, value in settings.iteritems():
+            footer += '{0} = {1}\n'.format(key, value)
+        np.savetxt(filename, outarr.T, fmt='%9s', header=header, footer=footer,
+                   delimiter='')
+                

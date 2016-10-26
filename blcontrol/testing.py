@@ -30,6 +30,10 @@ class FakeDet(object):
         return ['PRET=30.0', 'MCAC=1024', 'THSL=8.034', 'THFA=113',
                 'GAIN=12.045', 'TPEA=3.200', 'TECS=220.0']
 
+    def get_settings_dict(self):
+        return {'PRET':'30.0', 'MCAC':'1024', 'THSL':'8.034', 'THFA':'113',
+                'GAIN':'12.045', 'TPEA':'3.200', 'TECS':'220.0'}
+
     def get_spectrum(self):
         new = [i + int(200*np.exp(-1*(i-50)**2) + 100*random.random())
                 for i in self.get_energies()]
