@@ -59,32 +59,36 @@ class StageIO(object):
             #Set timeout to 0.5 seconds.  The number of motors is
             #determined by how many replies are read before a timeout occurs.
             self.port.timeout = 0.5
+            resolutions = {}
+            sernums = {}
             self.send_all(com.SERNUM)
+            self.send_all(com.GET, com.MICRORES)
+            while True:
+                try:
+                    reply = self.port.read()
+                    if reply.command_number == com.SERNUM:
+                        sernums[reply.device_number] = reply.data
+                    elif reply.command_number == com.MICRORES:
+                        resolutions[reply.device_number] = reply.data
+                except zb.exceptions.TimeoutError:
+                    break
             pos_queues = {}
             reply_queues = {}
-            try:
-                while True:
-                    reply = self.port.read()
-                    motor_num = reply.device_number
-                    motor = Motor(motor_num, self.port, self.config, reply.data)
-                    self.motors[motor.name] = motor
-                    self.motors_by_num[motor_num] = motor
-                    pos_queues[motor_num] = motor.pos_queue
-                    reply_queues[motor_num] = motor.reply_queue
-            except zb.exceptions.TimeoutError:
-                pass
-            self.send_all(com.GET, com.MICRORES)
-            for _ in self.motors:
-                reply = self.port.read()
-                motor_num = reply.device_number
-                motor = self.motors_by_num[motor_num]
-                stepres = self.config.getfloat('Motor Res', motor.name)
-                motor.resolution = stepres/reply.data
+            for motor_num, sernum in sernums.iteritems():
+                motor_name = self.config.get('Motor Names', str(sernum))
+                microres = resolutions[motor_num]
+                stepres = self.config.getfloat('Motor Res', motor_name)
+                res = stepres/microres
+                motor = Motor(motor_num, self.port, self.config, sernum, res)
+                self.motors[motor.name] = motor
+                self.motors_by_num[motor_num] = motor
+                pos_queues[motor_num] = motor.pos_queue
+                reply_queues[motor_num] = motor.reply_queue
             self.reader = SerialPortReader(self.port, pos_queues, reply_queues)
             self.reader.start()
         finally:
-            self.port.timeout = old_timeout  # Restore previous timeout
-
+            self.port.timeout = old_timeout # Restore previous timeout
+                
     def send_all(self, command_num, data=0):
         """Send a command to all connected motors."""
         self.port.write(0, command_num, data)
@@ -129,7 +133,7 @@ class Motor(object):
             stages.
     """
     
-    def __init__(self, number, port, config, sernum):
+    def __init__(self, number, port, config, sernum, resolution):
         """Initializes the Motor object.
 
         `resolution` should be overwritten after creation of Motor object,
@@ -143,8 +147,8 @@ class Motor(object):
         self._zeropos = 0
         self.reply_queue = Queue.Queue()
         self.pos_queue = SingleValQueue()
-        self.resolution = None
-    
+        self.resolution = resolution
+        
     def send(self, commandnum, data=0):
         """Send a command to the motor controller."""
         self.port.write(self.number, commandnum, data)
@@ -169,12 +173,12 @@ class Motor(object):
         else:
             timeout = self.port.timeout
         try:
-            reply = self.reply_queue.get(self.port.timeout)
+            reply = self.reply_queue.get(timeout)
             if commandnum is not None:
                 while (reply.command_number != commandnum):
                     reply = self.reply_queue.get()
         except Queue.Empty:
-            raise TimeoutError('Read timed out.')
+            raise zb.exceptions.TimeoutError('Read timed out.')
         return reply
             
     def stepdata2pos(self, stepdata):
@@ -281,7 +285,6 @@ class SerialPortReader(threading.Thread):
             reply = self._read()
             if reply is not None:
                 motor_num = reply.device_number
-                #print str(reply.command_number) + ' ; ' + str(reply.data)
                 if reply.command_number in (com.MTRACK, com.MANMTRACK,
                                             com.MANMV, com.POS, com.MVABS,
                                             com.STOP):
@@ -294,6 +297,7 @@ class SerialPortReader(threading.Thread):
 
 
 class MoveThread(threading.Thread):
+    """Commands the motor to move and lives until move is complete."""
     def __init__(self, motor, destination):
         super(MoveThread, self).__init__()
         self.daemon = True
@@ -301,14 +305,15 @@ class MoveThread(threading.Thread):
         self.destination = destination
 
     def run(self):
+        """Sends move command, and reads replies until move is completed.
+
+        Move is completed when the motor returns either a `move absolute`
+        command, indicating that it has reached the destination, or a `stop`
+        command, indicating that it was commanded to stop before the destination
+        was reached."""
         reply_com = None
         step_dest = self.motor.pos2stepdata(self.destination)
         self.motor.send(com.MVABS, step_dest)
         while reply_com not in (com.MVABS, com.STOP):
-            reply = self.motor.get_reply_notimeout(blocking=True)
+            reply = self.motor.get_reply(blocking=True)
             reply_com = reply.command_number
-        
-
-class TimeoutError(Exception):
-    """Exception raised when a reply is not received before port timeout."""
-    pass
