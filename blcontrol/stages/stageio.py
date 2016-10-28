@@ -149,7 +149,7 @@ class Motor(object):
         """Send a command to the motor controller."""
         self.port.write(self.number, commandnum, data)
 
-    def get_reply(self, commandnum=None):
+    def get_reply(self, commandnum=None, blocking=False):
         """Read a reply from the motor controller.
 
         Args:
@@ -158,36 +158,23 @@ class Motor(object):
 
         Raises:
             Timeout Error: A reply (optionally with the specified command
-                number) was not received within the serial port's timeout.
+                number) was not received within the serial port's timeout, if
+                blocking.
 
         Returns (zaber.serial.BinaryReply):
             The reply received from the motor controller.
         """
+        if blocking:
+            timeout = False
+        else:
+            timeout = self.port.timeout
         try:
             reply = self.reply_queue.get(self.port.timeout)
             if commandnum is not None:
                 while (reply.command_number != commandnum):
-                    reply = self.reply_queue.get(self.port.timeout)
+                    reply = self.reply_queue.get()
         except Queue.Empty:
             raise TimeoutError('Read timed out.')
-        return reply
-
-    def get_reply_notimeout(self, commandnum=None):
-        """Read a reply from the motor controller.
-
-        Note: Blocks until a valid reply is received.
-
-        Args:
-            commandnum (int, optional): If provided, this method will return
-                only a reply with this command number.
-
-        Returns (zaber.serial.BinaryReply):
-            The reply received from the motor controller.
-        """
-        reply = self.reply_queue.get()
-        if commandnum is not None:
-            while (reply.command_number != commandnum):
-                reply = self.reply_queue.get()
         return reply
             
     def stepdata2pos(self, stepdata):
@@ -210,7 +197,6 @@ class Motor(object):
                     and (position + self._zeropos <= self.travel)))
 
     def start_move(self, position):
-        #TODO: update this
         """Signals the motor to begin moving to `position`."""
         thread = MoveThread(self, position)
         thread.start()
@@ -256,6 +242,7 @@ class Motor(object):
 
     @property
     def pos(self):
+        """Returns device's current position."""
         self.send(com.POS)
         stepdata = self.get_reply(com.POS).data
         return self.stepdata2pos(stepdata)
@@ -318,7 +305,7 @@ class MoveThread(threading.Thread):
         step_dest = self.motor.pos2stepdata(self.destination)
         self.motor.send(com.MVABS, step_dest)
         while reply_com not in (com.MVABS, com.STOP):
-            reply = self.motor.get_reply_notimeout()
+            reply = self.motor.get_reply_notimeout(blocking=True)
             reply_com = reply.command_number
         
 

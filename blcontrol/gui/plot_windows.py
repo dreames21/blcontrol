@@ -29,7 +29,6 @@ class SpectrumDisplay(ttk.Frame):
         self.canvas.get_tk_widget().pack(side=TOP, fill=BOTH, expand=1)
 
     def plot(self, specqueue, roi):
-        print 'entered plot loop'
         try:
             spectrum = specqueue.get_nowait()
         except Queue.Empty:
@@ -64,7 +63,6 @@ class SpectrumDisplay(ttk.Frame):
         if self.plotloop:
             self.after_cancel(self.plotloop)
         self.plotloop = None
-        print 'plotloop stopped'
 
     def set_energies(self, energies):
         self.ax.set_ylabel('Counts')

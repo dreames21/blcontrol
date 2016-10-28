@@ -1,4 +1,4 @@
-## needs to be tested with a real detector
+## TODO: test with real detector when received
 
 """ This module defines classes for interacting with an Amptek DP5 device.
 
@@ -10,9 +10,7 @@ import serial
 from blcontrol.detector import pids
 from blcontrol.utils import add16b, byte2int
 from blcontrol.detector.exceptions import (DeviceError, TimeoutError,
-                                     UnexpectedReplyError, ChecksumError)
-
-#TODO: write method to request all detector settings
+                                           UnexpectedReplyError)
 
 class DP5Device(object):
     """A class representing a DP5 device.
@@ -83,19 +81,20 @@ class DP5Device(object):
 
         Raises:
             DeviceError: The device replied with an error condition.
-            ChecksumError: Reply from device has bad checksum.
+            TimeoutError: Read timed out or synced incorrectly.
+            ValueError: Device reply has bad checksum.
             
         Returns: A DP5Reply object encoding the packet received.
         """
         first = self.port.read(2)
         if first != pids.SYNC:
-            raise TimeoutError
+            raise TimeoutError('Read timed out.')
         header = first + self.port.read(4)
         datalen = byte2int(header[4:6], little_endian=False)
         data = self.port.read(datalen)
         checksum = self.port.read(2)
         if len(header) + len(data) + len(checksum) != datalen + 8:
-            raise TimeoutError
+            raise TimeoutError('Read timed out.')
         reply = DP5Reply(header, data, checksum)
         if reply.pid[0] == pids.ACK and reply.pid != pids.ACK_OK:
             errorstr = pids.ERRORS[reply.pid]
@@ -103,7 +102,7 @@ class DP5Device(object):
                                                                  errorstr)
             raise DeviceError(errmsg)
         elif not reply.is_checksum_good():
-            raise ChecksumError
+            raise ValueError('Bad checksum in reply')
         else:
             return reply
         
@@ -265,7 +264,32 @@ class DP5Device(object):
             return res
 
     def get_settings_dict(self):
-        pass
+        """Return a dictionary of all settings of the detector."""
+        settings_dict = {}
+        resp1 = self.get_setting(pids.SETTINGS_LIST[0:18])
+        resp2 = self.get_setting(pids.SETTINGS_LIST[18:36])
+        resp3 = self.get_setting(pids.SETTINGS_LIST[36:])
+        for i in resp1 + resp2 + resp3:
+            key, value = i.split('=')
+            settings_dict[key] = value
+        if settings_dict['RTDE'] == 'ON':
+            respr = self.get_setting(pids.RTD_SETTINGS)
+            for i in respr:
+                key, value = i.split('=')
+                settings_dict[key] = value
+        for sca in range(1, 17):
+            self.set_setting(pids.SCA_INDEX, sca)
+            resps = self.get_setting(pids.SCA_SETTINGS16)
+            for i in resps:
+                key, value = i.split('=')
+                key += str(sca)
+                settings_dict[key] = value
+            if sca <= 8:
+                resps8 = self.get_setting(pids.SCA_OUTPUT)
+                key, value = resps8.split('=')
+                key += str(sca)
+                settings_dict[key] = value
+        return settings_dict
 
     def get_status(self):
         """Requests a status packet from the detector.
@@ -421,8 +445,7 @@ class DP5Reply(object):
         self.checksum = checksum
 
     def encode(self):
-        """Returns the reply as a binary string in the form it was received.
-        """
+        """Returns the reply as a binary string in the form it was received."""
         return (pids.SYNC + self.pid + self.length + self.data +
                 self.checksum)
 
@@ -443,6 +466,7 @@ class DP5Reply(object):
         return add16b((packetsum, intchecksum)) == 0
 
 def parse_status(status_data):
+    """Parses a DP5 status bytestring into a dict."""
     return {
         'fast count': byte2int(status_data[0:4]),
         'slow count': byte2int(status_data[4:8]),

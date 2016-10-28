@@ -10,12 +10,12 @@ class FakeDet(object):
         
     def begin_acq(self, acqtime):
         self.mca = True
+        self.spectrum = 256*[0]
         timer = threading.Timer(acqtime, self.disable_mca)
         timer.start()
 
     def disable_mca(self):
         self.mca = False
-        self.spectrum = 256*[0]
     
     def get_status(self):
         return {'accumulation time': 30.0,

@@ -24,7 +24,6 @@ class SpectrumAcqThread(threading.Thread):
             if not mca_enabled:
                 self.data.settings = self.det.get_settings_dict()
             self.plotqueue.put(copy.deepcopy(self.data))
-            print 'put spec'
             time.sleep(0.5)
         self.plotqueue.join()
 

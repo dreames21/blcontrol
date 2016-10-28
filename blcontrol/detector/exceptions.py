@@ -1,5 +1,4 @@
-""" This module defines special exceptions raised by the `dp5io` module.
-"""
+""" This module defines special exceptions raised by the `dp5io` module."""
 
 class DeviceError(Exception):
     """Exception raised when device returns an error condition."""
@@ -7,13 +6,7 @@ class DeviceError(Exception):
 
 class TimeoutError(Exception):
     """Exception raised when read times out."""
-    def __str__(self):
-        return "Read timed out."
-
-class ChecksumError(Exception):
-    """Exeption raised when reply from device has bad checksum."""
-    def __str__(self):
-        return "Bad checksum in reply."
+    pass
 
 class UnexpectedReplyError(Exception):
     """Exception raised when device returns an unexpected reply."""
