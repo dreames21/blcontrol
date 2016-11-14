@@ -1,6 +1,6 @@
 import numpy as np
 import os
-from blcontrol.utils import cen_fwhm, com
+from scipy import interpolate, optimize
 
 class Spectrum(object):
     def __init__(self, cts, energies, status, timestamp):
@@ -190,3 +190,53 @@ class GridScan(object):
         np.savetxt(filename, outarr.T, fmt='%9s', header=header, footer=footer,
                    delimiter='')
                 
+
+def cen_fwhm(xdata, ydata):
+    xdata = np.array(xdata)
+    ydata = np.array(ydata, dtype=float)
+    assert len(xdata) == len(ydata)
+    ydata -= min(ydata)
+    max_y = max(ydata)
+    max_ind = ydata.tolist().index(max_y)
+    max_x = xdata[max_ind]
+    ydata -= max_y/2.
+    interp = interpolate.interp1d(xdata, ydata)
+
+    brack_left_ind = brack_right_ind = max_ind
+    while ydata[brack_left_ind] > 0 and brack_left_ind > 0:
+        brack_left_ind -=1
+    if brack_left_ind == 0:
+        hm_left = xdata[0]
+    else:
+        brack_left = xdata[brack_left_ind]
+        hm_left = optimize.brentq(interp, brack_left, max_x)
+        
+    while ydata[brack_right_ind] > 0 and (brack_right_ind < len(xdata) - 1):
+        brack_right_ind += 1
+    if brack_right_ind == len(xdata) - 1:
+        hm_right = xdata[-1]
+    else:
+        brack_right = xdata[brack_right_ind]
+        hm_right = optimize.brentq(interp, max_x, brack_right)
+
+    fw = hm_right - hm_left
+    cen = (hm_right + hm_left)/2.
+    return cen, fw
+
+
+def com(array, xvals, yvals):
+    array -= array.min()
+    try:
+        xcounts = array.sum(1).tolist()
+        xmoms = [xcounts[i]*value for i, value in enumerate(xvals)]
+        xcom = sum(xmoms)/sum(xcounts)
+    except ZeroDivisionError:
+        ## if there are no counts then return the geometric center
+        xcom = 0.5*(xvals[0] + xvals[-1])
+    try:
+        ycounts = array.sum(0).tolist()
+        ymoms = [ycounts[i]*value for i, value in enumerate(yvals)]
+        ycom = sum(ymoms)/sum(ycounts)
+    except ZeroDivisionError:
+        ycom = 0.5*(yvals[0] + yvals[-1])
+    return (xcom, ycom)

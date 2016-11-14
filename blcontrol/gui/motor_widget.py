@@ -9,9 +9,9 @@ if sys.version_info[0] < 3:
 else:
     from tkinter import * #pylint: disable=import-error, wildcard-import
 import blcontrol.stages.commands as com
-from blcontrol.gui.misc import FloatValFrame
+from blcontrol.gui.float_entry import FloatEntry
 
-class SingleMotorWidget(FloatValFrame):
+class SingleMotorWidget(ttk.Frame):
     """Base class for control widgets for a single motor.
 
     Attributes:
@@ -24,7 +24,7 @@ class SingleMotorWidget(FloatValFrame):
     """
     
     def __init__(self, parent, motor, **options):
-        FloatValFrame.__init__(self, parent, **options)
+        ttk.Frame.__init__(self, parent, **options)
         self.motor = motor
         self.current_pos = StringVar()
         self.make_widgets()
@@ -35,11 +35,10 @@ class SingleMotorWidget(FloatValFrame):
         name.grid(column=0, row=0, sticky=E, padx=(5,1))
         pos = ttk.Label(self, textvariable=self.current_pos, width=11, anchor=E)
         pos.grid(column=1, row=0, padx=2)
-        self.goto = ttk.Entry(self, width=7, justify=RIGHT, validate='key',
-                              validatecommand=self.vcmd)
+        self.goto = FloatEntry(self, width=7)
         self.goto.grid(column=2, row=0, padx=2)
         self.goto.bind('<KeyPress-KP_Enter>', self.move) #numpad Enter key
-        self.goto.bind('<KeyPress-Return>', self.move)
+        self.goto.bind('<KeyPress-Return>', self.move) #keyboard Enter key
         self.zerobutt = ttk.Button(self, text='Zero',
                                    command=self.motor.zero_here, width=5)
         self.zerobutt.grid(column=4, row=0, padx=5)

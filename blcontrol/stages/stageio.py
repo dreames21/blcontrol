@@ -7,7 +7,6 @@ import time
 import zaber.serial as zb
 
 import blcontrol.stages.commands as com
-from blcontrol.utils import SingleValQueue
 
 class StageIO(object):
     """Class for communication with motors.
@@ -153,7 +152,7 @@ class Motor(object):
         """Send a command to the motor controller."""
         self.port.write(self.number, commandnum, data)
 
-    def get_reply(self, commandnum=None, blocking=False):
+    def get_reply(self, commandnum=None, blocking=True, timeout=False):
         """Read a reply from the motor controller.
 
         Args:
@@ -168,15 +167,15 @@ class Motor(object):
         Returns (zaber.serial.BinaryReply):
             The reply received from the motor controller.
         """
-        if blocking:
-            timeout = False
+        if timeout:
+            to = self.port.timeout
         else:
-            timeout = self.port.timeout
+            to = None
         try:
-            reply = self.reply_queue.get(timeout)
+            reply = self.reply_queue.get(block=blocking, timeout=to)
             if commandnum is not None:
                 while (reply.command_number != commandnum):
-                    reply = self.reply_queue.get()
+                    reply = self.reply_queue.get(block=blocking, timeout=to)
         except Queue.Empty:
             raise zb.exceptions.TimeoutError('Read timed out.')
         return reply
@@ -276,7 +275,7 @@ class SerialPortReader(threading.Thread):
         try:
             return self.port.read()
         except zb.TimeoutError:
-            return None
+            pass
 
     def run(self):
         """Continuously reads from `self.port` and sorts inputs into Queues."""
@@ -315,5 +314,16 @@ class MoveThread(threading.Thread):
         step_dest = self.motor.pos2stepdata(self.destination)
         self.motor.send(com.MVABS, step_dest)
         while reply_com not in (com.MVABS, com.STOP):
-            reply = self.motor.get_reply(blocking=True)
+            reply = self.motor.get_reply(timeout=None)
             reply_com = reply.command_number
+
+class SingleValQueue(Queue.Queue):
+    """Implements a queue that holds only a single value."""
+    def __init__(self):
+        Queue.Queue.__init__(self, maxsize=1)
+
+    def put(self, item):
+        """If queue has an object, delete it before putting in a new one."""
+        if self.full():
+            self.get()
+        Queue.Queue.put(self, item)

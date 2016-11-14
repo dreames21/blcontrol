@@ -14,9 +14,16 @@ else:
     from tkinter import * #pylint: disable=import-error, wildcard-import
 
 class SpectrumDisplay(ttk.Frame):
+    """Frame containing a plot of the spectrum acquired from the detector.
+
+    Params:
+        plotloop:  An `after` loop to continually update the plot with new
+            data from the queue.
+        plot_objs:  A list containing objects in the plot window that need to
+            be removed and replaced at each loop iteration.
+    """
     def __init__(self, parent, **options):
         ttk.Frame.__init__(self, parent, **options)
-        self.energies = None
         self.make_widgets()
         self.plot_objs = [None, None, None, None]
         self.plotloop = None
@@ -29,6 +36,14 @@ class SpectrumDisplay(ttk.Frame):
         self.canvas.get_tk_widget().pack(side=TOP, fill=BOTH, expand=1)
 
     def plot(self, specqueue, roi):
+        """Loop to plot spectrum objects placed in the queue.
+
+        Args:
+            specqueue: A Queue.Queue object containing spectra fetched from the
+                detector.
+            roi: A 2-tuple containing the start and end values of the region of
+                interest (or None if n/a)
+        """
         try:
             spectrum = specqueue.get_nowait()
         except Queue.Empty:
@@ -60,11 +75,13 @@ class SpectrumDisplay(ttk.Frame):
         self.plotloop = self.after(250, lambda: self.plot(specqueue, roi))
 
     def stop_plot(self):
+        """Ends loop to update plot display."""
         if self.plotloop:
             self.after_cancel(self.plotloop)
         self.plotloop = None
 
     def set_energies(self, energies):
+        """Changes plot axes based on detector energy range."""
         self.ax.set_ylabel('Counts')
         self.ax.set_xlabel('Energy (keV)')
         self.ax.set_xlim(0, energies[-1])
@@ -72,23 +89,19 @@ class SpectrumDisplay(ttk.Frame):
 
 
 class ScanDisplay(ttk.Frame):
+    """Frame containing a plot of the latest scan.
+
+    Params:
+        plotloop:  An `after` loop to continually update the plot with new
+            data from the queue.
+        plot_objs:  A list containing objects in the plot window that need to
+            be removed and replaced at each loop iteration.
+    """
     def __init__(self, parent, **options):
         ttk.Frame.__init__(self, parent, **options)
         self.make_widgets()
         self.plotloop = None
         self.plot_objs = []
-
-    def clear_plot(self):
-        self.figure.clf()
-        self.plot_objs = []
-
-    def remove_plot_objs(self):
-        for thing in self.plot_objs:
-            thing.remove()
-        self.plot_objs = []
-        for cax in self.caxes:
-            if cax:
-                cax.cla()
 
     def make_widgets(self):
         self.figure = Figure(figsize=(15,5))
@@ -100,7 +113,29 @@ class ScanDisplay(ttk.Frame):
         self.axes[0].set_ylabel('Counts')
         self.canvas.show()
 
+    def clear_plot(self):
+        """Clears figure and removes all plot object references."""
+        self.figure.clf()
+        self.plot_objs = []
+
+    def remove_plot_objs(self):
+        """Remove all objects from current plot."""
+        for thing in self.plot_objs:
+            thing.remove()
+        self.plot_objs = []
+        for cax in self.caxes:
+            if cax:
+                cax.cla()
+
     def pre_plot_lin(self, locs, samplename, unit):
+        """Set up plot area for a linear scan.
+
+        Args:
+            locs: List of motor locations.
+            samplename: Name of optic being measured.
+            unit: String representing the unit to use for locations (e.g. mm,
+                deg, arcmin)
+        """
         self.clear_plot()
         self.axes[0] = self.figure.add_subplot(111)
         self.axes[0].set_xlim(min(locs), max(locs))
@@ -110,6 +145,14 @@ class ScanDisplay(ttk.Frame):
         self.canvas.show()
 
     def plot_lin(self, scanqueue, roi):
+        """Loop to plot linear scan objects placed in the queue.
+
+        Args:
+            scanqueue: A Queue.Queue object containing LinearScan objects to
+                plot.
+            roi: A 2-tuple containing the start and end values of the region of
+                interest (or None if n/a)
+        """
         try:
             scan = scanqueue.get_nowait()
         except Queue.Empty:
@@ -120,7 +163,7 @@ class ScanDisplay(ttk.Frame):
         self.plot_objs.append(plot1)
         if len(scan.counts) > 1:
             tot_text = ("Total:\nPeak is {0[1]} @ {0[0]}\nFWHM is {1[1]:0.3f} @"
-                "{1[0]:0.3f}").format(scan.peakloc_max(), scan.cen_fwhm())
+                " {1[0]:0.3f}").format(scan.peakloc_max(), scan.cen_fwhm())
             self.plot_objs.append(self.axes[0].text(0.02, 0.98, tot_text,
                 transform=self.axes[0].transAxes, va="top", color='g'))
         if roi:
@@ -140,6 +183,12 @@ class ScanDisplay(ttk.Frame):
         self.plotloop = self.after(100, lambda: self.plot_lin(scanqueue, roi))
 
     def pre_plot_grid(self, xlocs, ylocs):
+        """Set up plot area for a 2D grid scan.
+
+        Args:
+            xlocs, ylocs: List of scan locations for the x- and y-motors,
+                respectively.
+        """
         self.clear_plot()
         self.axes[0] = self.figure.add_subplot(121)
         self.axes[0].set_title('Total counts')
@@ -157,6 +206,13 @@ class ScanDisplay(ttk.Frame):
         self.caxes[1], _ = matplotlib.colorbar.make_axes(self.axes[1])
 
     def plot_grid(self, scanqueue, roi):
+        """Loop to plot grid scan objects placed in the queue.
+
+        Args:
+            scanqueue: A Queue.Queue object containing GridScan objects to plot.
+            roi: A 2-tuple containing the start and end values of the region of
+                interest (or None if n/a)
+        """
         try:
             scan = scanqueue.get_nowait()
         except Queue.Empty:
@@ -207,6 +263,7 @@ class ScanDisplay(ttk.Frame):
         self.plotloop = self.after(100, lambda: self.plot_grid(scanqueue, roi))
         
     def stop_plot(self):
+        """Cancel active plot loop."""
         if self.plotloop:
             self.after_cancel(self.plotloop)
         self.plotloop = None
