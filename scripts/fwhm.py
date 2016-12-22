@@ -7,7 +7,6 @@ def cen_fwhm(xdata, ydata):
     assert len(xdata) == len(ydata)
     ydata -= min(ydata)
     max_y = max(ydata)
-    print max_y
     max_ind = ydata.tolist().index(max_y)
     max_x = xdata[max_ind]
     ydata -= max_y/2.

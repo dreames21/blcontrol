@@ -10,7 +10,7 @@ def find_HPD(ydata):
     if ydata[0]:
         ydata.insert(0, 0.)
     g = [25000, 4, 0, 0] #guess
-    popt, pcov = curve_fit(fit_func, xdata, ydata, p0=g)
+    popt, pcov = curve_fit(fit_func, xdata, ydata, p0=g, maxfev=10000)
     A, b, x0, y0 = popt
 
     half_pow = 0.5*(A+y0)
