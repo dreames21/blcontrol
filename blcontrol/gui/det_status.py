@@ -1,7 +1,6 @@
-### needs to be tested with a real detector ####
-### detector error handling??
 """This module defines a tkinter widget to contain detector status info."""
 
+import Queue
 import sys
 if sys.version_info[0] < 3:
     from Tkinter import * #pylint: disable=wildcard-import, unused-wildcard-import
@@ -21,9 +20,9 @@ class DetectorStatus(ttk.Frame):
         refreshjob: An `after` loop to continually update the status data.
     """
 
-    def __init__(self, parent, det, **options):
+    def __init__(self, parent, queue, **options):
         ttk.Frame.__init__(self, parent, **options)
-        self.det = det
+        self.queue = queue
         self.stats = ['Preset Time', 'Accum. Time', 'Real Time', 'Dead Time', 
             'MCA Enabled', 'MCA Channels', 'Slow Count', 'Fast Count',
             'Slow Threshold', 'Fast Threshold', 'Gain', 'Peaking Time',
@@ -31,7 +30,6 @@ class DetectorStatus(ttk.Frame):
         self.variables = {name: StringVar() for name in self.stats}
         self.make_widgets()
         self.refresh_status()
-        self.refresh_settings()
 
     def make_widgets(self):
         title = ttk.Label(self, text="Detector Status", font='TkHeadingFont')
@@ -56,37 +54,39 @@ class DetectorStatus(ttk.Frame):
         Sets up an `after` loop to request new status data from the detector
         and update variables every 500 ms.
         """
-        status = self.det.get_status()
-        acc_time = status['accumulation time']
-        self.variables['Accum. Time'].set(str(acc_time) + ' s')
-        real_time = status['real time']
-        self.variables['Real Time'].set(str(real_time) + ' s')
-        dead_time = round(100*(real_time - acc_time)/real_time, 1)
-        self.variables['Dead Time'].set(str(dead_time) + '%')
-        self.variables['MCA Enabled'].set(str(status['MCA enabled']))
-        self.variables['Slow Count'].set(str(status['slow count']))
-        self.variables['Fast Count'].set(str(status['fast count']))
-        self.variables['Detector Temp'].set(str(
-            status['detector temperature (K)']) + ' K')
-        self.variables['Board Temp'].set(str(status['board temperature (C)']) +
-                                         ' C')
-        self.statusloop = self.after(500, self.refresh_status)
+        try:
+            status, settings = self.queue.get_nowait()
+        except Queue.Empty:
+            pass
+        else:
+            acc_time = status['accumulation time']
+            self.variables['Accum. Time'].set(str(acc_time) + ' s')
+            real_time = status['real time']
+            self.variables['Real Time'].set(str(real_time) + ' s')
+            if real_time:
+                dead_time = round(100*(real_time - acc_time)/real_time, 1)
+            else:
+                dead_time = 0.
+            self.variables['Dead Time'].set(str(dead_time) + '%')
+            self.variables['MCA Enabled'].set(str(status['MCA enabled']))
+            self.variables['Slow Count'].set(str(status['slow count']))
+            self.variables['Fast Count'].set(str(status['fast count']))
+            self.variables['Detector Temp'].set(str(
+                status['detector temperature (K)']) + ' K')
+            self.variables['Board Temp'].set(str(status['board temperature (C)']) +
+                                             ' C')
 
-    def refresh_settings(self):
-        """Updates the value of certain detector settings."""
-        settings = self.det.get_setting(['PRET', 'MCAC', 'THSL', 'THFA', 'GAIN',
-                                         'TPEA', 'TECS'])
-        values = [setting.split('=')[1] for setting in settings]
-        self.variables['Preset Time'].set(values[0] + ' s')
-        self.variables['MCA Channels'].set(values[1])
-        self.variables['Slow Threshold'].set(values[2] +'%')
-        self.variables['Fast Threshold'].set(values[3])
-        self.variables['Gain'].set(values[4])
-        self.variables['Peaking Time'].set(values[5] + ' us')
-        self.variables['Set Point'].set(values[6] + ' K')
-        self.settingsloop = self.after(1000, self.refresh_settings)
+            values = [setting.split('=')[1] for setting in settings]
+            self.variables['Preset Time'].set(values[0] + ' s')
+            self.variables['MCA Channels'].set(values[1])
+            self.variables['Slow Threshold'].set(values[2] +'%')
+            self.variables['Fast Threshold'].set(values[3])
+            self.variables['Gain'].set(values[4])
+            self.variables['Peaking Time'].set(values[5] + ' us')
+            self.variables['Set Point'].set(values[6] + ' K')
+        finally:
+            self.statusloop = self.after(250, self.refresh_status)
 
     def cancel_loops(self):
         """Cancels refresh loop so application can exit gracefully."""
         self.after_cancel(self.statusloop)
-        self.after_cancel(self.settingsloop)

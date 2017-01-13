@@ -25,8 +25,8 @@ class BeamlineGUI(Tk):
         self.make_widgets()
         
     def make_widgets(self):
-        #self.det_status_widget = DetectorStatus(self, self.det)
-        #self.det_status_widget.grid(row=0, column=2, sticky='nsew')
+        self.det_status_widget = DetectorStatus(self, self.det.status_queue)
+        self.det_status_widget.grid(row=0, column=2, sticky='nsew')
         self.motorwidget = MotorFrame(self, self.sio)
         self.motorwidget.grid(row=1, column=2, sticky='nsew')
         self.scancontrol = ScanController(self, self.det, self.sio)

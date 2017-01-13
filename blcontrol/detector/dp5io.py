@@ -31,10 +31,13 @@ class DP5Device(object):
         serialport = self.config.get("Detector Port", "serialport")
         to = self.config.getint("Detector Port", "timeout")
         br = self.config.getint("Detector Port", "baudrate")
-        self.port = serial.Serial(port=serialport, timeout=to, baudrate=br)
-        self.port.flushInput()
-        self.stat_thread = StatusThread(self)
-        print self.send(pids.ECHO_REQ, 'Detector Ready').data
+        self._port = serial.Serial(port=serialport, timeout=to, baudrate=br)
+        self._port.flushInput()
+        self._lock = threading.Lock()  #read/write lock for serial port access
+        self.status_queue = Queue.Queue()
+        self.status_thread = threading.Thread(target=self._status_loop)
+        self.status_thread.daemon = True
+        self.status_thread.start()
 
     def send(self, *args):
         """Sends a command and checks the reply for errors.
@@ -59,10 +62,12 @@ class DP5Device(object):
             output = command.encode()
         else:
             raise TypeError("`command` type invalid")
-        self.port.write(output)
-        return self.get_reply()
+        with self._lock:
+            self._port.write(output)
+            reply = self._get_reply()
+        return reply
 
-    def get_reply(self):
+    def _get_reply(self):
         """Reads a reply from the device.
 
         Raises:
@@ -72,13 +77,13 @@ class DP5Device(object):
             
         Returns: A DP5Reply object encoding the packet received.
         """
-        first = self.port.read(2)
+        first = self._port.read(2)
         if first != pids.SYNC:
             raise TimeoutError('Read timed out.')
-        header = first + self.port.read(4)
+        header = first + self._port.read(4)
         datalen = byte2int(header[4:6], little_endian=False)
-        data = self.port.read(datalen)
-        checksum = self.port.read(2)
+        data = self._port.read(datalen)
+        checksum = self._port.read(2)
         if len(header) + len(data) + len(checksum) != datalen + 8:
             raise TimeoutError('Read timed out.')
         reply = DP5Reply(header, data, checksum)
@@ -91,7 +96,6 @@ class DP5Device(object):
             raise ValueError('Bad checksum in reply')
         else:
             return reply
-        
 
     def enable_mca(self):
         """Enables the MCA.
@@ -342,6 +346,14 @@ class DP5Device(object):
         gain = self.gain
         return [ch/(calib_factor*gain*chans) + offset for ch in range(chans)]
 
+    def _status_loop(self):
+        sets = ['PRET', 'MCAC', 'THSL', 'THFA', 'GAIN', 'TPEA', 'TECS']
+        while True:
+            status = self.get_status()
+            settings = self.get_setting(sets)
+            self.status_queue.put((status, settings))
+            time.sleep(0.5)
+            
 
 class DP5Command(object):
     """A class for creating commands to be sent to the DP5."""
