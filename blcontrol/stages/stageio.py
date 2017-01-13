@@ -50,6 +50,7 @@ class StageIO(object):
         else:
             portpath = matches[0][0]
         self.port = zb.BinarySerial(portpath)
+        self.port._ser.flushInput()
 
     def initialize_motors(self):
         """Populates `self.motors` with objects for each connected motor."""

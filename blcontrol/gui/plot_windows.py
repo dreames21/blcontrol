@@ -52,7 +52,10 @@ class SpectrumDisplay(ttk.Frame):
         for thing in self.plot_objs:
             if thing:
                 thing.remove() #clear previous plot objects
-        self.ax.set_ylim(0, max(spectrum.counts)*1.25)
+        if max(spectrum.counts) == 0:
+            self.ax.set_ylim(0, 1)
+        else:
+            self.ax.set_ylim(0, max(spectrum.counts)*1.25)
         self.plot_objs[0], = self.ax.plot(spectrum.energies, spectrum.counts,
                                           'g')
         total_text = ("Total counts: {0}\nPeak is {1[1]} ct @ {1[0]:0.2f} keV\n"
@@ -127,7 +130,7 @@ class ScanDisplay(ttk.Frame):
             if cax:
                 cax.cla()
 
-    def pre_plot_lin(self, locs, samplename, unit):
+    def pre_plot_lin(self, locs, motorname, unit):
         """Set up plot area for a linear scan.
 
         Args:
@@ -139,7 +142,7 @@ class ScanDisplay(ttk.Frame):
         self.clear_plot()
         self.axes[0] = self.figure.add_subplot(111)
         self.axes[0].set_xlim(min(locs), max(locs))
-        self.axes[0].set_title(samplename)
+        self.axes[0].set_title('Linear scan ' + motorname)
         self.axes[0].set_xlabel('Location ({0})'.format(unit))
         self.axes[0].set_ylabel('Counts')
         self.canvas.show()
@@ -170,14 +173,17 @@ class ScanDisplay(ttk.Frame):
             plot2, = self.axes[0].plot(scan.locations, scan.roi_counts(roi),
                                        '.-b')
             self.plot_objs.append(plot2)
-            if len(scan.counts) > 2:
+            if len(scan.counts) > 1:
                 roi_text = ("ROI:\nPeak is {0[1]} @ {0[0]}\nFWHM is "
                     "{1[1]:0.3f} @ {1[0]:0.3f}").format(
                         scan.peakloc_max_roi(roi), scan.cen_fwhm_roi(roi))
                 self.plot_objs.append(self.axes[0].text(0.5, 0.98, roi_text,
                     transform=self.axes[0].transAxes, va="top", color='b'))
             self.axes[0].set_ylim(bottom=0.8*min(scan.roi_counts(roi)))
-        self.axes[0].set_ylim(top=1.25*max(scan.counts))
+        if max(scan.counts) == 0:
+            self.axes[0].set_ylim(0,1)
+        else:
+            self.axes[0].set_ylim(top=1.25*max(scan.counts))
         self.canvas.show()
         scanqueue.task_done()
         self.plotloop = self.after(100, lambda: self.plot_lin(scanqueue, roi))

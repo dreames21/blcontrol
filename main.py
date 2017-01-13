@@ -14,5 +14,3 @@ if __name__ == '__main__':
     config = load_conf_file()
     gui = BeamlineGUI(config)
     gui.mainloop()
-
-

@@ -63,7 +63,7 @@ class Spectrum(object):
 
     def roi_peakloc_max(self, roi):
         maximum = max(self.roi_counts(roi))
-        peakloc = self.energies[self.roi_counts(roi).index(maximum)]
+        peakloc = self.roi_energies(roi)[self.roi_counts(roi).index(maximum)]
         return peakloc, maximum
 
 

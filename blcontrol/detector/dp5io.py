@@ -1,13 +1,14 @@
-## TODO: test with real detector when received
-
 """ This module defines classes for interacting with an Amptek DP5 device.
 
 For a full description of the software capabilities of the DP5, see the
 DP5 Programmer's Guide.
 """
 
+import Queue
 import serial
 import struct
+import threading
+import time
 from blcontrol.detector import pids
 from blcontrol.detector.exceptions import (DeviceError, TimeoutError,
                                            UnexpectedReplyError)
@@ -27,28 +28,13 @@ class DP5Device(object):
     """
     def __init__(self, config):
         self.config = config
-        self.port = self._find_port()
-        self.port.timeout = self.config.getint("Detector Port", "timeout")
-
-    def _find_port(self):
-        """ Finds the serial port to which the detector is connected.
-
-        This is based on the serial ID number listed in `self.config`.
-
-        Raises: IOError: No detector is found.
-
-        Returns (DP5Serial): A representation of the serial port to
-            which the detector is connected.
-        """
-        serialid = self.config.get("Detector Port", "serialid")
-        matches = []
-        for i in serial.tools.list_ports.grep(serialid):
-            matches.append(i)
-        if not matches:
-            raise IOError("Detector not found")
-        else:
-            portpath = matches[0][0]
-        return serial.Serial(portpath)
+        serialport = self.config.get("Detector Port", "serialport")
+        to = self.config.getint("Detector Port", "timeout")
+        br = self.config.getint("Detector Port", "baudrate")
+        self.port = serial.Serial(port=serialport, timeout=to, baudrate=br)
+        self.port.flushInput()
+        self.stat_thread = StatusThread(self)
+        print self.send(pids.ECHO_REQ, 'Detector Ready').data
 
     def send(self, *args):
         """Sends a command and checks the reply for errors.
@@ -64,10 +50,10 @@ class DP5Device(object):
         """
         if len(args) == 2:
             pid, data = args
-            output = DP5Command(pid, data).encode()
+            command = DP5Command(pid, data)
         else:
             command = args[0]
-        if isinstance(command, int):
+        if isinstance(command, int) or isinstance(command, str):
             output = DP5Command(command).encode()
         elif isinstance(command, DP5Command):
             output = command.encode()
@@ -301,10 +287,9 @@ class DP5Device(object):
         return parse_status(reply.data)
 
     @property
-    def dtype(self):
-        """Returns a string containing the detector type."""
-        sernum = self.get_status()['sernum']
-        return self.config.get("Det Type", str(sernum))
+    def sernum(self):
+        """Returns the detector serial number (int)"""
+        return self.get_status()['serial number']
 
     @property
     def calibration(self):
@@ -313,7 +298,7 @@ class DP5Device(object):
         To obtain energy from channel number:
             E = chan/((calib_factor)*(hardware_gain)*(num_chans)) + offset
         """
-        config_section = "{0} Calib".format(self.dtype)
+        config_section = "{0} Calib".format(self.sernum)
         calib_factor = self.config.getfloat(config_section, "calib_factor")
         offset = self.config.getfloat(config_section, "offset")
         return calib_factor, offset
@@ -333,12 +318,14 @@ class DP5Device(object):
         """Returns the number of MCA channels in use."""
         return int(self.get_setting("MCAC").split('=')[1])
 
-    def chan2energy(self, chan):
-        """Convert from channel number to channel energy.
+    #def chan2energy(self, chans):
+        #"""Convert from channel number to channel energy.
 
-        Returns: energy of the given channel number in keV."""
-        calib_factor, offset = self.calibration
-        return chan/(calib_factor*self.gain*self.num_chans) + offset
+        #Returns: energy of the given channel number in keV."""
+        #calib_factor, offset = self.calibration
+        #chans = self.num_chans
+        #gain = self.gain
+        #return [ch/(calib_factor*gain*chans) + offset for ch in chans]
 
     def energy2chan(self, energy):
         """Convert from channel number to channel energy.
@@ -350,7 +337,10 @@ class DP5Device(object):
 
     def get_energies(self):
         """Return a list of energy bins in use in the MCA."""
-        return [self.chan2energy(ch) for ch in range(self.num_chans)]
+        calib_factor, offset = self.calibration
+        chans = self.num_chans
+        gain = self.gain
+        return [ch/(calib_factor*gain*chans) + offset for ch in range(chans)]
 
 
 class DP5Command(object):

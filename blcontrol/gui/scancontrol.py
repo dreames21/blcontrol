@@ -110,7 +110,7 @@ class ScanController(ttk.Frame):
         thread.start()
         self.specplot.plot(thread.specqueue, params['roi'])
         unit = self.settings.linset.stepunit.get().strip()
-        self.scanplot.pre_plot_lin(locs, params['samplename'], unit)
+        self.scanplot.pre_plot_lin(locs, params['motorname'], unit)
         self.scanplot.plot_lin(thread.plotqueue, params['roi'])
         self.check_is_running()
 

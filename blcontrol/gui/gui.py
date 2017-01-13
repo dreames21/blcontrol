@@ -9,6 +9,7 @@ if sys.version_info[0] < 3:
 else:
     from tkinter import * #pylint: disable=import-error, wildcard-import
 from blcontrol.stages.stageio import StageIO
+from blcontrol.detector.dp5io import DP5Device
 from blcontrol.gui.motor_widget import MotorFrame
 from blcontrol.gui.det_status import DetectorStatus
 from blcontrol.gui.scancontrol import ScanController
@@ -19,12 +20,13 @@ class BeamlineGUI(Tk):
     def __init__(self, config, **options):
         Tk.__init__(self, **options)
         self.sio = StageIO(config)
-        self.det = FakeDet()
+        #self.det = FakeDet()
+        self.det = DP5Device(config)
         self.make_widgets()
         
     def make_widgets(self):
-        self.det_status_widget = DetectorStatus(self, self.det)
-        self.det_status_widget.grid(row=0, column=2, sticky='nsew')
+        #self.det_status_widget = DetectorStatus(self, self.det)
+        #self.det_status_widget.grid(row=0, column=2, sticky='nsew')
         self.motorwidget = MotorFrame(self, self.sio)
         self.motorwidget.grid(row=1, column=2, sticky='nsew')
         self.scancontrol = ScanController(self, self.det, self.sio)
@@ -48,4 +50,5 @@ class BeamlineGUI(Tk):
     def report_callback_exception(self, *args):
         """Displays a dialog window with traceback when exception is raised."""
         err = traceback.format_exception(*args)
-        messagebox.showerror('Exception', err)
+        #messagebox.showerror('Exception', err)
+        print err

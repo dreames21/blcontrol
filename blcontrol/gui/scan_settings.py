@@ -169,7 +169,7 @@ class SpectrumSettings(ScanSettingsFrame):
         chansel = ttk.Combobox(chanframe, values=vals, state='readonly',
             textvariable=self.variables['chans'], width=4)
         chansel.bind('<<ComboboxSelected>>',
-                          lambda x: chansel.selection_clear())
+                     lambda x: chansel.selection_clear())
         chansel.pack(side=LEFT)
         chanframe.pack(side=TOP, fill=BOTH, expand=1, pady=3)
         
@@ -243,7 +243,7 @@ class SettingsFrame(ttk.Frame):
         """Toggles scan settings between different types of scans."""
         value = self.scantype.get()
         for child in self.paramframe.winfo_children():
-            child.clear_widgets()
+            #child.clear_widgets()
             child.grid_forget()
         if value == 'Single Spectrum':
             self.curr_scan = self.specset
