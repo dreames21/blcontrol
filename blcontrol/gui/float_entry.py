@@ -9,10 +9,11 @@ class FloatEntry(ttk.Entry):
     """Entry that allows values that can be converted to floats."""
     def __init__(self, parent, **options):
         ttk.Entry.__init__(self, parent, **options)
-        self.vcmd = (self.register(self.float_validate), '%P')
+        self.vcmd = (self.register(self.float_validate), '%d', '%i', '%P', '%s',
+                     '%S', '%v', '%V', '%W')
         self.config(validatecommand=self.vcmd, justify=RIGHT, validate='key')
 
-    def float_validate(self, P):
+    def float_validate(self, d, i, P, s, S, v, V, W):
         """Validation for entries requiring valid floats."""
         allowed = ('', '-', '.')
         if P in allowed:
@@ -24,3 +25,4 @@ class FloatEntry(ttk.Entry):
             return False
         else:
             return True
+        

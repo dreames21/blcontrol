@@ -8,6 +8,13 @@ if sys.version_info[0] < 3:
     import tkMessageBox as messagebox
 else:
     from tkinter import * #pylint: disable=import-error, wildcard-import
+from det_settings_window import DetSettingsWindow
+
+
+STATS =['Preset Time', 'Accum. Time', 'Real Time', 'Dead Time', 'MCA Enabled',
+        'MCA Channels', 'Slow Count', 'Fast Count', 'Slow Threshold',
+        'Fast Threshold', 'Gain', 'Peaking Time', 'Detector Temp', 'Set Point',
+        'Board Temp']
 
 class DetectorStatus(ttk.Frame):
     """A widget that displays the detector's status in real time.
@@ -20,21 +27,18 @@ class DetectorStatus(ttk.Frame):
         refreshjob: An `after` loop to continually update the status data.
     """
 
-    def __init__(self, parent, queue, **options):
+    def __init__(self, parent, det, **options):
         ttk.Frame.__init__(self, parent, **options)
-        self.queue = queue
-        self.stats = ['Preset Time', 'Accum. Time', 'Real Time', 'Dead Time', 
-            'MCA Enabled', 'MCA Channels', 'Slow Count', 'Fast Count',
-            'Slow Threshold', 'Fast Threshold', 'Gain', 'Peaking Time',
-            'Detector Temp', 'Set Point', 'Board Temp']
-        self.variables = {name: StringVar() for name in self.stats}
+        self.det = det
+        self.variables = {name: StringVar() for name in STATS}
         self.make_widgets()
+
         self.refresh_status()
 
     def make_widgets(self):
-        title = ttk.Label(self, text="Detector Status", font='TkHeadingFont')
-        title.grid(column=1, row=0, columnspan=2, pady=9)
-        for i, stat in enumerate(self.stats):
+        title = ttk.Label(self, text="Detector Control", font='TkHeadingFont')
+        title.grid(column=0, row=0, columnspan=4, pady=7)
+        for i, stat in enumerate(STATS):
             namelabel = ttk.Label(self, text=stat+':')
             vallabel = ttk.Label(self, textvariable=self.variables[stat])
             if i in (3, 11, 14):
@@ -43,10 +47,24 @@ class DetectorStatus(ttk.Frame):
                 p = 0
             namelabel.grid(column=1, row=i+1, padx=3, pady=(0,p), sticky=E)
             vallabel.grid(column=2, row=i+1, padx=3, pady=(0,p), sticky=W)
+
+        self.conn_button = ttk.Button(self, text='Connect',
+                                      command=self.det.reconnect)
+        self.conn_button.grid(row=len(STATS)+2, column=1, pady=15)
+        
+        self.disc_button = ttk.Button(self, text='Disconnect',
+                                     command=self.det.disconnect, state=DISABLED)
+        self.disc_button.grid(row=len(STATS)+2, column=2, pady=15)
+
+        settings_button = ttk.Button(self, text='Settings',
+                                     command=self.open_settings_window)
+        settings_button.grid(row=len(STATS)+3, column=1, columnspan=2)
+        
         self.grid_rowconfigure(0, weight=1)
-        self.grid_rowconfigure(len(self.stats)+2, weight=1)
+        self.grid_rowconfigure(len(STATS)+4, weight=1)
         self.grid_columnconfigure(0, weight=1)
         self.grid_columnconfigure(3, weight=1)
+        
 
     def refresh_status(self):
         """Reads status data from detector and sets corresponding variables.
@@ -54,8 +72,15 @@ class DetectorStatus(ttk.Frame):
         Sets up an `after` loop to request new status data from the detector
         and update variables every 500 ms.
         """
+        if self.det.is_connected:
+            self.conn_button['state'] = DISABLED
+            self.disc_button['state'] = NORMAL
+        else:
+            self.conn_button['state'] = NORMAL
+            self.disc_button['state'] = DISABLED
+            
         try:
-            status, settings = self.queue.get_nowait()
+            status, settings = self.det.status_queue.get_nowait()
         except Queue.Empty:
             pass
         else:
@@ -76,16 +101,19 @@ class DetectorStatus(ttk.Frame):
             self.variables['Board Temp'].set(str(status['board temperature (C)']) +
                                              ' C')
 
-            values = [setting.split('=')[1] for setting in settings]
-            self.variables['Preset Time'].set(values[0] + ' s')
-            self.variables['MCA Channels'].set(values[1])
-            self.variables['Slow Threshold'].set(values[2] +'%')
-            self.variables['Fast Threshold'].set(values[3])
-            self.variables['Gain'].set(values[4])
-            self.variables['Peaking Time'].set(values[5] + ' us')
-            self.variables['Set Point'].set(values[6] + ' K')
+            self.variables['Preset Time'].set(settings['PRET'] + ' s')
+            self.variables['MCA Channels'].set(settings['MCAC'])
+            self.variables['Slow Threshold'].set(settings['THSL'] +'%')
+            self.variables['Fast Threshold'].set(settings['THFA'])
+            self.variables['Gain'].set(settings['GAIN'])
+            self.variables['Peaking Time'].set(settings['TPEA'] + ' us')
+            self.variables['Set Point'].set(settings['TECS'] + ' K')
         finally:
             self.statusloop = self.after(250, self.refresh_status)
+
+    def open_settings_window(self):
+        setwin = DetSettingsWindow(self, self.det)
+        setwin.grab_set()
 
     def cancel_loops(self):
         """Cancels refresh loop so application can exit gracefully."""

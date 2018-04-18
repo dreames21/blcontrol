@@ -7,13 +7,11 @@ if sys.version_info[0] < 3:
     import tkMessageBox as messagebox
 else:
     from tkinter import * #pylint: disable=import-error, wildcard-import
-from blcontrol.gui.scan_settings import SettingsFrame
-from blcontrol.gui.plot_windows import SpectrumDisplay, ScanDisplay
-from blcontrol.scan_threads import (SpectrumAcqThread, LinearScanThread,
+from scan_settings import SettingsFrame
+from plot_windows import SpectrumDisplay, ScanDisplay
+from scan_threads import (SpectrumAcqThread, LinearScanThread,
     GridScanThread)
-
-#TODO: implement dialog to edit detector settings (and maybe other settings?
-#   like number of mca chans used in a linear/grid scan?)
+    
 
 class ScanController(ttk.Frame):
     """Controls starting/ending scans and plotting."""
@@ -61,13 +59,15 @@ class ScanController(ttk.Frame):
         """Export the last scan to a text file."""
         self.last_scan.join()
         data = self.last_scan.data
-        filename = filedialog.asksaveasfilename()
-        data.export(filename)
+        filename = filedialog.asksaveasfilename(initialdir='~')
+        samplename = self.settings.get_scan_params()['samplename']
+        if filename:
+            data.export(filename, samplename)
 
     def check_is_running(self):
         """Loop to check whether scan threads are still alive."""
         if self.last_scan.is_alive():
-            self.checker = self.after(200, self.check_is_running)
+            self.checker = self.after(50, self.check_is_running)
         else:
             self.settings.startbutt.config(state=NORMAL)
             self.settings.savebutt.config(state=NORMAL)
@@ -116,6 +116,7 @@ class ScanController(ttk.Frame):
 
     def start_grid_scan(self, params):
         """Begin a grid scan based on settings frame parameters."""
+        self.det.set_setting('MCAC', 256)
         dx = self.sio.motors['dx']
         dy = self.sio.motors['dy']
         stepsize = params['stepsize']

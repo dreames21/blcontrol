@@ -47,7 +47,7 @@ class SpectrumDisplay(ttk.Frame):
         try:
             spectrum = specqueue.get_nowait()
         except Queue.Empty:
-            self.plotloop = self.after(50, lambda: self.plot(specqueue, roi))
+            self.plotloop = self.after(10, lambda: self.plot(specqueue, roi))
             return
         for thing in self.plot_objs:
             if thing:
@@ -56,6 +56,7 @@ class SpectrumDisplay(ttk.Frame):
             self.ax.set_ylim(0, 1)
         else:
             self.ax.set_ylim(0, max(spectrum.counts)*1.25)
+        self.set_energies(spectrum.energies)
         self.plot_objs[0], = self.ax.plot(spectrum.energies, spectrum.counts,
                                           'g')
         total_text = ("Total counts: {0}\nPeak is {1[1]} ct @ {1[0]:0.2f} keV\n"
@@ -75,7 +76,7 @@ class SpectrumDisplay(ttk.Frame):
                 transform=self.ax.transAxes, va="top")
         self.canvas.show()
         specqueue.task_done()
-        self.plotloop = self.after(250, lambda: self.plot(specqueue, roi))
+        self.plotloop = self.after(10, lambda: self.plot(specqueue, roi))
 
     def stop_plot(self):
         """Ends loop to update plot display."""
@@ -88,7 +89,7 @@ class SpectrumDisplay(ttk.Frame):
         self.ax.set_ylabel('Counts')
         self.ax.set_xlabel('Energy (keV)')
         self.ax.set_xlim(0, energies[-1])
-        self.canvas.show()
+        #self.canvas.show()
 
 
 class ScanDisplay(ttk.Frame):
@@ -180,6 +181,8 @@ class ScanDisplay(ttk.Frame):
                 self.plot_objs.append(self.axes[0].text(0.5, 0.98, roi_text,
                     transform=self.axes[0].transAxes, va="top", color='b'))
             self.axes[0].set_ylim(bottom=0.8*min(scan.roi_counts(roi)))
+        else:
+            self.axes[0].set_ylim(bottom=0.8*min(scan.counts))
         if max(scan.counts) == 0:
             self.axes[0].set_ylim(0,1)
         else:
@@ -273,6 +276,4 @@ class ScanDisplay(ttk.Frame):
         if self.plotloop:
             self.after_cancel(self.plotloop)
         self.plotloop = None
-    
 
-    

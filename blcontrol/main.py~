@@ -1,13 +1,14 @@
+#! /usr/bin/env python
+
 import ConfigParser
 import os
 from blcontrol.gui.gui import BeamlineGUI
 
-def load_conf_file(conf_path='~/.blconf'):
+def load_conf_file(conf_path='/home/bladmin/blcontrol/config/blconf.txt'):
     xconfpath = os.path.expanduser(conf_path)
     config = ConfigParser.SafeConfigParser()
-    configfile = open(xconfpath, 'r')
-    config.readfp(configfile)
-    configfile.close()
+    with open(xconfpath, 'r') as configfile:
+        config.readfp(configfile)
     return config
 
 if __name__ == '__main__':

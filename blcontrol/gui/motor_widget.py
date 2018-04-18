@@ -8,8 +8,8 @@ if sys.version_info[0] < 3:
     import tkMessageBox as messagebox
 else:
     from tkinter import * #pylint: disable=import-error, wildcard-import
-import blcontrol.stages.commands as com
-from blcontrol.gui.float_entry import FloatEntry
+import stages.commands as com
+from float_entry import FloatEntry
 
 class SingleMotorWidget(ttk.Frame):
     """Base class for control widgets for a single motor.
@@ -152,7 +152,7 @@ class MotorFrame(ttk.Frame):
         self.check_for_errs()
 
     def make_widgets(self):
-        title = ttk.Label(self, text='Motor Positioning', font='TkHeadingFont')
+        title = ttk.Label(self, text='Motor Control', font='TkHeadingFont')
         title.pack(side=TOP, pady=7, expand=1)
         self.sio.send_all(com.POS)
         self.sio.send_all(com.GET, com.MODE)

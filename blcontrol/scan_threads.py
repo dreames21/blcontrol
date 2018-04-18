@@ -2,7 +2,7 @@ import numpy as np
 import threading
 import time
 import Queue
-from blcontrol.scan_data import Spectrum, LinearScan, GridScan
+from scan_data import Spectrum, LinearScan, GridScan
 
 class ScanThread(threading.Thread):
     """Base class for data acquisition threads.
@@ -24,6 +24,7 @@ class ScanThread(threading.Thread):
         self.specqueue = Queue.Queue()
         self.data = None
         self.daemon = True
+        self.name = "ScanThread"
 
     def stop(self):
         """Signal the thread to terminate after the current iteration."""
@@ -37,20 +38,22 @@ class ScanThread(threading.Thread):
 
 class SpectrumAcqThread(ScanThread):
     """Thread for acquiring a single spectrum."""
-    def __init__(self, det, acctime, plotqueue):
+    def __init__(self, det, acctime, plotqueue, get_settings=True):
         super(SpectrumAcqThread, self).__init__(det, acctime)
         self.plotqueue = plotqueue
+        self.get_settings = get_settings
 
     def run(self):
         scandata = Spectrum([], self.det.get_energies(), {}, time.asctime())
         self.det.begin_acq(self.acctime)
         mca_enabled = True
+        if self.get_settings:
+            scandata.settings = self.det.get_all_settings()
         while mca_enabled:
             scandata.counts, scandata.status = self.det.get_spectrum()
             mca_enabled = scandata.status['MCA enabled']
             self.plotqueue.put(scandata)
             time.sleep(0.5)
-        scandata.settings = self.det.get_settings_dict()
         self.data = scandata
         self.plotqueue.join()
         
@@ -66,23 +69,28 @@ class LinearScanThread(ScanThread):
         super(LinearScanThread, self).__init__(det, acctime)
         self.motor = motor
         self.locs = locs
+        self.name = "LinearScanThread"
 
     def run(self):
         scandata = LinearScan([], [], self.motor.name, time.asctime())
-        for l in self.locs:
+        for i, l in enumerate(self.locs):
+            get_settings = not bool(i)
             if self.is_stopped:
                 break
             else:
                 mv_thread = self.motor.start_move(l)
                 mv_thread.join()
                 specthread = SpectrumAcqThread(self.det, self.acctime,
-                                               self.specqueue)
+                                               self.specqueue, get_settings)
                 specthread.start()
                 specthread.join()
                 spectrum = specthread.data
                 scandata.locations.append(l)
                 scandata.spectra.append(spectrum)
                 self.plotqueue.put(scandata)
+        settings = scandata.spectra[0].settings
+        for spec in scandata.spectra:
+            spec.settings = settings
         self.data = scandata
         self.plotqueue.join()
 
@@ -101,6 +109,7 @@ class GridScanThread(ScanThread):
         self.ylocs = ylocs
         self.dx = sio.motors['dx']
         self.dy = sio.motors['dy']
+        self.name = "GridScanThread"
         
     def run(self):
         spectra = np.empty((len(self.xlocs), len(self.ylocs)), dtype=object)
@@ -110,17 +119,19 @@ class GridScanThread(ScanThread):
         for y in self.ylocs:
             for x in xlocscopy:
                 if not self.is_stopped:
+                    i, j = self.xlocs.index(x), self.ylocs.index(y)
                     y_thread = self.dy.start_move(y)
                     x_thread = self.dx.start_move(x)
                     y_thread.join()
                     x_thread.join()
+                    get_settings = not bool(i+j)
                     specthread = SpectrumAcqThread(self.det, self.acctime,
-                                                   self.specqueue)
+                                                   self.specqueue, get_settings)
                     specthread.start()
                     specthread.join()
                     spectrum = specthread.data
-                    i, j = self.xlocs.index(x), self.ylocs.index(y)
                     scandata.spectra[i, j] = spectrum
+                    spectrum.settings = scandata.spectra[0,0].settings
                     self.plotqueue.put(scandata)
             xlocscopy.reverse()
         self.data = scandata

@@ -4,7 +4,7 @@ if sys.version_info[0] < 3:
     import ttk
 else:
     from tkinter import * #pylint: disable=import-error, wildcard-import
-from blcontrol.gui.float_entry import FloatEntry
+from float_entry import FloatEntry
 
 class ScanSettingsFrame(ttk.Frame):
     """Base class for different types of scan settings frames."""
@@ -79,12 +79,12 @@ class LinearScanSettings(ScanSettingsFrame):
         extframe = ttk.Frame(self)
         ttk.Label(extframe, text='Extent: ').pack(side=LEFT)
         self.start = StringVar()
-        startent = FloatEntry(extframe, width=4,
+        startent = FloatEntry(extframe, width=7,
                               textvariable=self.variables['start'])
         startent.pack(side=LEFT)
         ttk.Label(extframe, text=' to ').pack(side=LEFT)
         self.end = StringVar()
-        endent = FloatEntry(extframe, width=4,
+        endent = FloatEntry(extframe, width=7,
                             textvariable=self.variables['end'])
         endent.pack(side=LEFT)
         lab2 = ttk.Label(extframe, textvariable=self.stepunit)

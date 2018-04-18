@@ -9,9 +9,9 @@ import serial
 import struct
 import threading
 import time
-from blcontrol.detector import pids
-from blcontrol.detector.exceptions import (DeviceError, TimeoutError,
-                                           UnexpectedReplyError)
+from detector import pids
+from detector.exceptions import (DeviceError, TimeoutError,
+                                 UnexpectedReplyError)
 
 class DP5Device(object):
     """A class representing a DP5 device.
@@ -32,12 +32,34 @@ class DP5Device(object):
         to = self.config.getint("Detector Port", "timeout")
         br = self.config.getint("Detector Port", "baudrate")
         self._port = serial.Serial(port=serialport, timeout=to, baudrate=br)
-        self._port.flushInput()
+        #self._port.flushInput()
+
+        # The following 2 lines will raise TimeoutError if det is not
+        # connected/ready
+        self._write(pids.ECHO_REQ, "Detector Ready")
+        self._read()
+        
         self._lock = threading.Lock()  #read/write lock for serial port access
         self.status_queue = Queue.Queue()
-        self.status_thread = threading.Thread(target=self._status_loop)
-        self.status_thread.daemon = True
+        self.status_thread = StatusThread(self)
         self.status_thread.start()
+        
+    @property
+    def is_connected(self):
+        return self._port.is_open
+        
+    def reconnect(self):
+        if not self.is_connected:
+            self._port.open()
+            self.status_thread = StatusThread(self)
+            self.status_thread.start()
+
+    def disconnect(self):
+        if self.is_connected:
+            if self.status_thread.is_alive():
+                self.status_thread.stop()
+                self.status_thread.join()
+            self._port.close()
 
     def send(self, *args):
         """Sends a command and checks the reply for errors.
@@ -51,6 +73,13 @@ class DP5Device(object):
 
         Returns (DP5Reply): Reply received from the device.
         """
+        with self._lock:
+            self._write(*args)
+            reply = self._read()
+        return reply
+
+    def _write(self, *args):
+        #self._port.flush()
         if len(args) == 2:
             pid, data = args
             command = DP5Command(pid, data)
@@ -62,12 +91,9 @@ class DP5Device(object):
             output = command.encode()
         else:
             raise TypeError("`command` type invalid")
-        with self._lock:
-            self._port.write(output)
-            reply = self._get_reply()
-        return reply
+        self._port.write(output)
 
-    def _get_reply(self):
+    def _read(self):
         """Reads a reply from the device.
 
         Raises:
@@ -79,18 +105,18 @@ class DP5Device(object):
         """
         first = self._port.read(2)
         if first != pids.SYNC:
-            raise TimeoutError('Read timed out.')
+            raise TimeoutError('Read timed out. Check detector connection.')
         header = first + self._port.read(4)
         datalen = byte2int(header[4:6], little_endian=False)
         data = self._port.read(datalen)
         checksum = self._port.read(2)
         if len(header) + len(data) + len(checksum) != datalen + 8:
-            raise TimeoutError('Read timed out.')
+            raise TimeoutError('Read timed out.  Check detector connection.')
         reply = DP5Reply(header, data, checksum)
         if reply.pid[0] == pids.ACK and reply.pid != pids.ACK_OK:
             errorstr = pids.ERRORS[reply.pid]
-            errmsg = "DP5 Device returned error {0}: {1}".format(reply.pid,
-                                                                 errorstr)
+            errmsg = 'DP5 Device returned error: {0}: "{1}"'.format(errorstr,
+                                                                  reply.data)
             raise DeviceError(errmsg)
         elif not reply.is_checksum_good():
             raise ValueError('Bad checksum in reply')
@@ -187,7 +213,7 @@ class DP5Device(object):
             tb_dict = pids.SCOPE_TB_FPGA20
         elif fpga_clock == 80:
             tb_dict = pids.SCOPE_TB_FPGA80
-        peaktime = float(self.get_setting('TPEA').split('=')[1])
+        peaktime = float(self.get_setting('TPEA'))
         for key, value in tb_dict.iteritems():
             if key[0] <= peaktime <= key[1]:
                 timebase = value
@@ -218,7 +244,15 @@ class DP5Device(object):
         reply1 = self.send(command1)
         if reply1.pid != pids.ACK_OK:
             raise UnexpectedReplyError(reply1.pid)
-        self.get_setting(param)
+
+    def set_settings_dict(self, settings_dict):
+        datastr = ''
+        for param, value in settings_dict.iteritems():
+            datastr += '{0}={1};'.format(param.upper(), value)
+        command = DP5Command(pids.CONFIG, datastr)
+        reply = self.send(command)
+        if reply.pid != pids.ACK_OK:
+            raise DeviceError(reply.data)
 
     def get_setting(self, arg):
         """Returns the value of a list of ASCII parameters.
@@ -228,7 +262,6 @@ class DP5Device(object):
                 a single string with parameters separated by semicolons.
 
         Raises:
-            ValueError: Parameter is not 4 characters long.
             UnexpectedReplyError: Device returns an unexpected
                 reply.
 
@@ -238,47 +271,48 @@ class DP5Device(object):
         See Section 5.1 in the DP5 Programmer's Guide for a list of
         allowed parameters.
         """
-        if isinstance(arg, str):
-            arg = [arg]
+        param = arg.upper() + ';'
+        command = DP5Command(pids.CONFIG_REQ, param)
+        reply = self.send(command)
+        if reply.pid != pids.CONFIG_READ:
+            raise UnexpectedReplyError(reply.pid)
+        res = reply.data.rstrip(';').split('=')[1]
+        return res
+
+    def get_settings_dict(self, params_list):
         data = ''
-        for param in arg:
+        for param in params_list:
             data += param.upper() + ';'
         command = DP5Command(pids.CONFIG_REQ, data)
         reply = self.send(command)
         if reply.pid != pids.CONFIG_READ:
             raise UnexpectedReplyError(reply.pid)
         res = reply.data.rstrip(';').split(';')
-        if len(res) == 1:
-            return res[0]
-        else:
-            return res
-
-    def get_settings_dict(self):
-        """Return a dictionary of all settings of the detector."""
         settings_dict = {}
-        resp1 = self.get_setting(pids.SETTINGS_LIST[0:18])
-        resp2 = self.get_setting(pids.SETTINGS_LIST[18:36])
-        resp3 = self.get_setting(pids.SETTINGS_LIST[36:])
-        for i in resp1 + resp2 + resp3:
-            key, value = i.split('=')
+        for s in res:
+            key, value = s.split('=')
             settings_dict[key] = value
+        return settings_dict
+
+    def get_all_settings(self):
+        """Return a dictionary of all settings of the detector."""
+        resp1 = self.get_settings_dict(pids.SETTINGS_LIST[0:18])
+        resp2 = self.get_settings_dict(pids.SETTINGS_LIST[18:36])
+        resp3 = self.get_settings_dict(pids.SETTINGS_LIST[36:])
+        settings_dict = {}
+        for d in (resp1, resp2, resp3):
+            settings_dict.update(d)
         if settings_dict['RTDE'] == 'ON':
-            respr = self.get_setting(pids.RTD_SETTINGS)
-            for i in respr:
-                key, value = i.split('=')
-                settings_dict[key] = value
+            respr = self.get_settings_dict(pids.RTD_SETTINGS)
+            settings_dict.update(respr)
         for sca in range(1, 17):
             self.set_setting(pids.SCA_INDEX, sca)
-            resps = self.get_setting(pids.SCA_SETTINGS16)
+            resps = self.get_settings_dict(pids.SCA_SETTINGS16)
             for i in resps:
-                key, value = i.split('=')
-                key += str(sca)
-                settings_dict[key] = value
+                settings_dict.update(resps)
             if sca <= 8:
-                resps8 = self.get_setting(pids.SCA_OUTPUT)
-                key, value = resps8.split('=')
-                key += str(sca)
-                settings_dict[key] = value
+                resps8 = {pids.SCA_OUTPUT:self.get_setting(pids.SCA_OUTPUT)}
+                settings_dict.update(resps)
         return settings_dict
 
     def get_status(self):
@@ -310,7 +344,7 @@ class DP5Device(object):
     @property
     def gain(self):
         """Returns total amplifier gain."""
-        return float(self.get_setting("GAIN").split('=')[1])
+        return float(self.get_setting("GAIN"))
 
     @gain.setter
     def gain(self, g):
@@ -320,16 +354,14 @@ class DP5Device(object):
     @property
     def num_chans(self):
         """Returns the number of MCA channels in use."""
-        return int(self.get_setting("MCAC").split('=')[1])
+        return int(self.get_setting("MCAC"))
 
-    #def chan2energy(self, chans):
+    #def chan2energy(self, chan):
         #"""Convert from channel number to channel energy.
 
         #Returns: energy of the given channel number in keV."""
-        #calib_factor, offset = self.calibration
-        #chans = self.num_chans
-        #gain = self.gain
-        #return [ch/(calib_factor*gain*chans) + offset for ch in chans]
+        calib_factor, offset = self.calibration
+        return chan/(calib_factor*self.gain*self.num_chans) + offset
 
     def energy2chan(self, energy):
         """Convert from channel number to channel energy.
@@ -346,14 +378,6 @@ class DP5Device(object):
         gain = self.gain
         return [ch/(calib_factor*gain*chans) + offset for ch in range(chans)]
 
-    def _status_loop(self):
-        sets = ['PRET', 'MCAC', 'THSL', 'THFA', 'GAIN', 'TPEA', 'TECS']
-        while True:
-            status = self.get_status()
-            settings = self.get_setting(sets)
-            self.status_queue.put((status, settings))
-            time.sleep(0.5)
-            
 
 class DP5Command(object):
     """A class for creating commands to be sent to the DP5."""
@@ -517,6 +541,24 @@ def parse_status(status_data):
                                            chr(47))
     }
 
+
+class StatusThread(threading.Thread):
+    def __init__(self, det):
+        super(StatusThread, self).__init__()
+        self._stopper = threading.Event()
+        self.det = det
+        self.daemon = True
+
+    def run(self):
+        sets = ['PRET', 'MCAC', 'THSL', 'THFA', 'GAIN', 'TPEA', 'TECS']
+        while not self._stopper.is_set():
+            status = self.det.get_status()
+            settings = self.det.get_settings_dict(sets)
+            self.det.status_queue.put((status, settings))
+            time.sleep(0.5)
+
+    def stop(self):
+        self._stopper.set()
 
 def add16b(sequence):
     """Implements 16 bit addition of integers.

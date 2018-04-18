@@ -1,0 +1,83 @@
+[Motor Names]
+36144=yaw
+36142=pit
+36153=dx
+34795=dy
+36592=dz
+36900=ox
+50852=oy
+36610=oz
+37203=rot3
+
+[Motor Res]
+# Deg/step or mm/step, from zaber.com
+# Note: on motor spec sheets the resolution is given in mm or deg 
+# per microstep at the default microstep resolution, which is 1/64.
+yaw=0.015   
+pit=0.015  
+dy=0.003048    
+dx=0.003048
+dz=0.03175
+ox=0.006395
+oy=0.006096
+oz=0.0079375
+rot3=0.01
+
+[Max Current]
+# Amps
+yaw=0.95
+pit=0.95
+dy=0.5
+dx=0.5
+dz=0.55
+ox=0.55
+oy=0.95
+oz=1.2
+rot3=1.100
+
+[Travel]
+# mm
+yaw=
+pit=
+rot3=
+dx=50.8
+dy=152.4
+dz=150
+ox=150
+oy=40
+oz=254
+
+[Stage Port]
+usbsn=AL00BUSL
+serialport=/dev/ttyUSB0
+timeout=5       ;seconds
+baudrate=9600
+
+[Det Type]
+14711=CdTe
+14845=SDD
+
+[Detector Port]
+timeout=10
+serialport=/dev/ttyS0
+baudrate=115200
+
+##### Detector Calibration #####
+# energy = (channel number)/((calib factor)*(hardware gain)*(num channels)) + offset
+# calib_factor units are 1/keV
+# offset units are keV
+
+[14845 Calib]
+#as of 10 April 2018
+calib_factor=0.00315691059703
+offset=-0.0439739471587
+
+[14711 Calib]
+#updated 12 sept 2016 with spectrum data from 9 sept 2016
+calib_factor=0.000772012270785
+offset=-0.302908357512
+
+[2607 Calib]
+#as of 20 April 2017
+calib_factor=0.000564960446259
+offset=-0.104852853501

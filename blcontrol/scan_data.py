@@ -32,7 +32,7 @@ class Spectrum(object):
     def roi_total_count(self, roi):
         return sum(self.roi_counts(roi))
 
-    def export(self, filename):
+    def export(self, filename, samplename):
         outarr = np.array([self.energies, self.counts]).T
         if self.samplename:
             samp = self.samplename
@@ -40,7 +40,7 @@ class Spectrum(object):
             samp = ''
         header = (os.path.abspath(filename) + '\n' +
                   'MCA Spectrum ' + self.timestamp + '\n' +
-                  samp + '\n\nkeV       cts')
+                  samplename + '\n\nkeV       cts')
         footer = '\nDetector status:\n'
         for key, value in self.status.iteritems():
             footer += '{0} = {1}\n'.format(key, value)
@@ -73,17 +73,13 @@ class LinearScan(object):
         self.spectra = spectra
         self.motorname = motorname
         self.timestamp = timestamp
-        self.samplename = None
 
-    def export(self, filename):
+    def export(self, filename, samplename):
         energycol = self.spectra[0].energies
         outarr = np.array([energycol])
-        if self.samplename:
-            samp = self.samplename
-        else:
-            samp = ''
         metadata = (os.path.abspath(filename) +'\n'+ 'Linear Scan of ' +
-                    self.motorname +' '+ self.timestamp +'\n'+ samp + '\n')
+                    self.motorname +' '+ self.timestamp +'\n'+ samplename +
+                    '\n')
         locline = 'Locations: '
         for i, x in enumerate(self.locations):
             locline += '{0:0.3f} '.format(x)
@@ -163,15 +159,11 @@ class GridScan(object):
         counts_cl = np.clip(self.roi_counts(roi), 0, self.roi_counts(roi).max())
         return com(counts_cl, self.xlocs, self.ylocs)
 
-    def export(self, filename):
+    def export(self, filename, samplename):
         energycol = self.spectra[0,0].energies
         outarr = np.array([energycol])
-        if self.samplename:
-            samp = self.samplename
-        else:
-            samp = ''
         metadata = (os.path.abspath(filename) +'\n'+ 'Grid scan dx, dy' +' '+
-                  self.timestamp +'\n'+ samp + '\n')
+                  self.timestamp +'\n'+ samplename + '\n')
         locline = 'Locations: ' 
         for i, x in enumerate(self.xlocs):
             for j, y in enumerate(self.ylocs):
