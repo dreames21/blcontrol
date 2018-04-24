@@ -117,3 +117,9 @@ old/
 *.mtc1
 *.out
 *.synctex.gz
+
+# Swap
+*.swp
+
+# Zero positions
+*bldata.txt
