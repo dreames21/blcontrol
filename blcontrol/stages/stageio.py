@@ -258,6 +258,39 @@ class Motor(object):
         stepdata = self.get_reply(com.POS).data
         return self.stepdata2pos(stepdata)
 
+    @property
+    def max_current(self):
+        return self.config.getfloat('Max Current', self.name)
+
+## need exceptions to prevent setting currents > max current
+
+    @property
+    def hold_current(self):
+	"""Gives the holding current of the motor in Amps."""
+        self.send(com.GET, com.HOLDCURR)
+        data = self.get_reply(com.HOLDCURR).data
+        return data*0.02 #data is in 20 mA increments
+
+    @hold_current.setter
+    def hold_current(self, value):
+        data = value/0.02
+        self.send(com.HOLDCURR, data)
+	self.get_reply(com.HOLDCURR)
+
+    @property
+    def run_current(self):
+        """Gives the RMS running current of the motor in Amps"""
+        self.send(com.GET, com.RUNCURR)
+	data = self.get_reply(com.RUNCURR).data
+        return data*0.014 #data is in increments of 14.1 mA RMS (20 mA peak)
+
+    @run_current.setter
+    def run_current(self, value):
+        data = value/0.014
+        self.send(com.RUNCURR, data)
+        self.get_reply(com.RUNCURR)
+        
+
 
 class SerialPortReader(threading.Thread):
     """A thread to monitor the serial port and parse input.
