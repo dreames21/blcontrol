@@ -229,11 +229,11 @@ class Motor(object):
 
     @property
     def zeropos(self):
-        return self.zeroposconfig.getzero('Zero Positions', self.name)
+        return self.zeroposconfig.getzero(self.name)
 
     @zeropos.setter
     def zeropos(self, value):
-        self.zeroposconfig.set('Zero Positions', self.name, str(value))
+        self.zeroposconfig.setzero(self.name, value)
         self.zeroposconfig.write_file()
 
     @property
@@ -377,17 +377,36 @@ cfg_full_path = os.path.join(module_dir, '..','..','config','bldata.txt')
 
 class ZeroPosConfig(ConfigParser.SafeConfigParser):
     """Implements a config file to hold the zero positions of the motors."""
+
+    section = "Zero Positions"
+
     def __init__(self, filepath=cfg_full_path):
         ConfigParser.SafeConfigParser.__init__(self)
         self.filepath = filepath
-        self.read(self.filepath)
+
+        ### open file, or if it doesn't exist, create it, and make sure it
+        ### has correct section header
+        try:
+            fp = open(self.filepath, 'r+')
+        except IOError:
+            fp = open(self.filepath, 'w+')
+        finally:
+            self.readfp(fp)
+            fp.close()
+        if not self.has_section(self.section):
+            self.add_section(self.section)
                 
-    def getzero(self, *args):
-        section, option = args[0:2]
-        if not self.has_option(section, option):
-            self.set(section, option, '0')
+    def getzero(self, name):
+        """Gets the zero position from the config file, or sets it to zero and
+        writes the file if necessary."""
+        if not self.has_option(self.section, name):
+            self.set(self.section, name, '0')
             self.write_file()
-        return ConfigParser.SafeConfigParser.getfloat(self, *args)
+        return ConfigParser.SafeConfigParser.getfloat(self, self.section, name)
+
+    def setzero(self, name, value):
+        return ConfigParser.SafeConfigParser.set(self, self.section, name,
+                                                 str(value))
 
     def write_file(self):
         with open(self.filepath, 'w') as datafile:
