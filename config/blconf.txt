@@ -62,7 +62,8 @@ serialport=/dev/ttyS0
 baudrate=115200
 
 ##### Detector Calibration #####
-# energy = (channel number)/((calib factor)*(hardware gain)*(num channels)) + offset
+# energy = (channel number)/((calib factor)*(hardware gain)*(num channels))
+#           + offset
 # calib_factor units are 1/keV
 # offset units are keV
 

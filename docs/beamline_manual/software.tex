@@ -1,10 +1,12 @@
 \chapter{Software Overview\label{sec:software}}
 
-This chapter will serve as an overview of the functionality of the BLControl software. Figure~\ref{fig:ui} shows the full user interface that appears when the application is started. Each panel in the window is explained in its own section below.
+This chapter will serve as an overview of the functionality of the \texttt{blcontrol} software. Figure~\ref{fig:ui} shows the full user interface that appears when the application is started. Each panel in the window is explained in its own section below.
+
+%start software
 
 \begin{figure}
 \centering
-\includegraphics[width=0.7\textwidth]{fullui.png}
+\includegraphics[width=\textwidth]{fullui.png}
 \caption{\label{fig:ui} Screenshot of the full user interface on startup. The elements of the interface, clockwise from top left, are the scan settings, the single spectrum plot, the detector status readout, the motor control panel, and the scan plot.}
 \end{figure}
 
@@ -12,7 +14,7 @@ This chapter will serve as an overview of the functionality of the BLControl sof
 
 \begin{figure}
 \centering
-\includegraphics[width=0.5\textwidth]{scansettings.png}
+\includegraphics[width=0.45\textwidth]{scansettings.png}
 \caption{\label{fig:scanset} The scan settings panel, with scan type set to ``Single Spectrum.''}
 \end{figure}
 
@@ -23,7 +25,7 @@ The sample name field is only used to identify the sample in any saved files. Yo
 The ROI setting allows you to choose a region of the spectrum between two energy values to be analyzed in real-time along with the total spectrum. If this value is set, the ROI will be highlighted in the spectrum plot and information about the portion of the spectrum will be displayed on the plot. The counts in the ROI will also be counted separately in any scans that are run.
 
 The dropdown menu allows you to choose what type of scan to run, with the choices being ``Single Spectrum,'' ``Linear Scan'' and ``Grid Scan.'' Each scan type is covered in more detail below. When the scan type is changed, the lower portion of the panel will change to display the settings available for that scan type.
-For each scan type, press the ``Start'' button on the bottom of the scan settings panel to begin running the scan. The ``Stop'' button may be used to terminate the scan prematurely. Once a scan is finished or has been stopped by the user, the ``Save Scan'' button allows you to save the data from the most recent scan in a plaintext format.
+For each scan type, press the ``Start'' button on the bottom of the scan settings panel to begin running the scan. The ``Stop'' button may be used to terminate the scan prematurely. Once a scan is finished or has been stopped by the user, the ``Save Scan'' button allows you to save the data from the most recent scan in a plaintext format. The saved scan file will include all of the detector status and settings data, and the current position of each connected stage.
 
 \subsection{Single Spectrum}
 
@@ -46,7 +48,7 @@ A linear scan consists of moving a single stage over a distance in specified inc
 
 \begin{figure}
 \centering
-\includegraphics[width=0.5\textwidth]{linscan.png}
+\includegraphics[width=0.45\textwidth]{linscan.png}
 \caption{\label{fig:linscan} The scan settings panel when ``Linear Scan'' is selected.}
 \end{figure}
 
@@ -70,7 +72,7 @@ A grid scan is a 2D scan of the detector in the $xy$ plane, which is useful for 
 
 \begin{figure}
 \centering
-\includegraphics[width=0.5\textwidth]{gridscan.png}
+\includegraphics[width=0.45\textwidth]{gridscan.png}
 \caption{\label{fig:gridscan} The scan settings panel when ``Grid Scan'' is selected.}
 \end{figure}
 
@@ -103,9 +105,27 @@ If the power has been disconnected to one of the stages since the last use, it m
 
 \begin{figure}
 \centering
-\includegraphics[width=0.35\textwidth]{detctl.png}
+\includegraphics[width=0.3\textwidth]{detctl.png}
 \caption{\label{fig:detctl} The detector status panel.}
 \end{figure}
+
+\subsection{Detector Status}
+
+Figure~\ref{fig:detctl} shows the detector control panel. The top portion of the panel displays constantly updated status information from the detector. The preset time is the total duration for which the detector will accumulate the current spectrum. ``Accum. Time'' is the amount of active accumulation time elapsed so far in the current spectrum, and ``Real Time'' is the amount of real (clock) time elapsed so far. The difference between the two is the dead time, which depends on the count rate and the currently set peaking time in the detector's pulse shaping electronics. More information about peaking time can be found in the DP5 User Manual \cite[p.~8]{dp5_user_man}.
+
+``MCA Enabled'' and ``MCA Channels'' give the current status of the detector's multi-channel analyzer. ``Slow Count'' and ``Fast Count'' are the sum of all counts in the slow and fast channels, respectively, and ``Slow Threshold'' and ``Fast Threshold'' are the currently set thresholds for the lower level discriminator for the respective channels.
+The DP5 User Manual discusses the differences between the slow and fast channels \cite[p.~7-8]{dp5_user_man}. The slow channel threshold is given in percent of the full energy range, and the fast channel threshold is a number between 0 and 511.93, where 512 is the full energy range (see \cite[p.~162]{dp5_prog_guide} for more information on the fast channel threshold).
+The total gain of the amplifier, which governs the energy range of the MCA, is listed next. The status readout concludes with the total gain of the preamplifier, the peaking time, the current detector temperature and the set point of the detector cooler (in Kelvin), and the current temperature of the electronics board (in degrees Celsius). The detector should be cooled to below 225K. Lower temperatures are better for reduced noise.
+
+Below the status readout are three buttons for interacting with the detector. The primary purpose of the ``Connect'' and ``Disconnect'' buttons is to re-establish communication if the detector stops responding or delivering status updates. The detector communication port is opened and ready to be used when the software is started.
+
+\subsection{Modifying Detector Settings}
+
+The ``Settings'' button in the detector control panel opens the ``Detector Settings'' window, allowing the user to modify certain detector parameters. This pop-up window is shown in Fig.~\ref{fig:detsettings}. On the left (``Basic'') side, a number of commonly used settings are listed along with their current values. To update one of the settings, modify the value in the text field and then press the ``Apply'' button. If you have modified one or more of the values in the text fields but you do not want to apply these changes, press the ``Reset'' button to reset all values to their previous settings.
+
+The right side of the settings window, labeled ``Advanced,'' allows the user to edit any of the ASCII configuration values for the DP5. All ASCII commands and the allowed values for each are listed in the DP5 Programmer's Guide \cite{dp5_prog_guide}. This function should not need to be used regularly, and caution should be used when modifying the ASCII configuration.
+
+To obtain the current value of an ASCII configuration parameter, enter the 4-character name of the parameter in the left text field and press the ``Get'' button. The parameter value will appear in the right text field. To change the value of a parameter, enter the parameter name in the left text field and the new value in the right field (after the ``='' sign). After setting a new value, it is good practice to press ``Get'' again to verify that the desired value has been set correctly.
 
 \begin{figure}
 \centering
@@ -114,3 +134,126 @@ If the power has been disconnected to one of the stages since the last use, it m
 \end{figure}
 
 \section{Configuration Files}
+
+Two configuration files are used by the \texttt{blcontrol} software. Both are found in the \path{blcontrol/config} directory. The file \texttt{bldata.txt} contains the zero positions for each stage in units of steps from the home sensor. It should not need to be edited by the user, even when installing a new stage. The software will automatically write to this file when the zero position is changed by the user.
+
+The second file is called \texttt{blconf.txt}. It is used by the software to read various settings for the detector and motors, but it is not editable directly in the software. When a stage or detector is modified or added to the system, it will be necessary to edit \texttt{blconf.txt} to include the specifications for the device, using a text editor. Note that if the configuration file is modified, the software will need to be restarted for changes to take effect. It is good practice to create a backup of your configuration before making modifications so that you have a working version to revert to if something breaks.
+
+Sec.~\ref{sec:ex_conf} shows a recent version of this file for illustrative purposes---the values listed there may not necessarily be valid for the current iteration of the system. Each section heading is described in Sec.~\ref{sec:conf_heads}. Note that \texttt{\#} indicates comments, \texttt{;} indicates inline comments, section headings are indicated by \verb|[...]|, and configuration values are listed as \verb|key=value|. Even if a device is not currently connected to the beamline assembly, it can still have configuration information listed in \texttt{blconf.txt} for future reference.
+
+\subsection{Example \texttt{blconf.txt} \label{sec:ex_conf}}
+
+\begin{verbatim}
+# Beamline configuration file for motors and detectors
+# Last updated 10 April 2018
+
+[Motor Names]
+36144=yaw
+36142=pit
+36153=dx
+34795=dy
+36592=dz
+36900=ox
+50852=oy
+36610=oz
+37203=rot3
+
+[Motor Res]
+# Deg/step or mm/step, from zaber.com
+# Note: on motor spec sheets the resolution is given in mm or deg 
+# per microstep at the default microstep resolution, which is 1/64.
+yaw=0.015   
+pit=0.015  
+dy=0.003048    
+dx=0.003048
+dz=0.03175
+ox=0.006395
+oy=0.006096
+oz=0.0079375
+rot3=0.01
+
+[Max Current]
+# Amps
+yaw=0.95
+pit=0.95
+dy=0.5
+dx=0.5
+dz=0.55
+ox=0.55
+oy=0.95
+oz=1.2
+rot3=1.100
+
+[Travel]
+# mm
+yaw=
+pit=
+rot3=
+dx=50.8
+dy=152.4
+dz=150
+ox=150
+oy=40
+oz=254
+
+[Stage Port]
+usbsn=AL00BUSL
+serialport=/dev/ttyUSB0
+timeout=5       ;seconds
+baudrate=9600
+
+[Detector Port]
+timeout=10
+serialport=/dev/ttyS0
+baudrate=115200
+
+##### Detector Calibration #####
+# energy = (channel number)/((calib factor)*(hardware gain)*(num channels))
+#           + offset
+# calib_factor units are 1/keV
+# offset units are keV
+
+[14845 Calib]
+#as of 10 April 2018
+calib_factor=0.00315691059703
+offset=-0.0439739471587
+
+[14711 Calib]
+#updated 12 sept 2016 with spectrum data from 9 sept 2016
+calib_factor=0.000772012270785
+offset=-0.302908357512
+
+[2607 Calib]
+#as of 20 April 2017
+calib_factor=0.000564960446259
+offset=-0.104852853501
+
+\end{verbatim}
+
+\subsection{Configuration File Headings\label{sec:conf_heads}}
+
+\subsubsection{Motor Names}
+
+In this section each motor is listed by serial number and given a name which will be used to identify it in the software and the rest of the configuration file. A new \texttt{key=value} pair should be created for any new stage that is introduced to the system, and the resolution, maximum current, and travel should be defined in the following systems.
+
+\subsubsection{Motor Res}
+
+This section lists the resolution if each motor in real units, degrees per step for rotary stages and mm per step for linear stages. These values are taken from the specifications for each stage listed on \url{zaber.com}. As indicated in the comments, the values in this configuration are in units/step, while the values listed on the Zaber website are given in units/microstep.
+
+\subsubsection{Max Current}
+
+These are the maximum allowed values for the running and holding currents for each motor from the specification sheet. The units are Amps.
+
+\subsubsection{Travel}
+
+This section lists the travel for each motor, in mm. Rotary stages have no limit on travel (they are allowed to move past the home sensor), so this value is left blank. This section also tells the software which units to use---a stage with no travel defined is a rotary stage and therefore will use degrees instead of mm.
+
+\subsubsection{Stage/Detector Port}
+
+Settings for the communication port to the Zaber stages are listed under \texttt{Stage Port}. The serial number of the USB-to-serial converter allows the software to find the communication port automatically, or it must be specified by the \texttt{serialport} variable. The timeout is user-definable and the units are seconds. \texttt{baudrate} is the rate used when opening the port, and it must match the baud rate that the stages are set to accept (this should not be modified under normal circumstances).
+
+The options for \texttt{Detector Port} are similar, except there is no USB serial number because the detector communication is serial only.
+
+\subsubsection{Detector Calibration}
+
+This part of the configuration file consists of multiple sections, one for each detector that is used in the beamline. The comments give the units of each calibration variable and the instructions that the software uses to convert from channel to energy using the calibration variables. Whenever a detector is calibrated, the section corresponding to that detector's serial number must be updated to reflect the new values of \verb|calib_factor| and \texttt{offset}. A new section should be created for any new detector that is used in the system, and it must have the heading \verb|[***** Calib]|, where \verb|*****| is the serial number of the detector. Comment lines should always be given for each detector to indicate when it was last calibrated. For more information on calibrating the detectors, see Chapter~\ref{chap:calib}.
