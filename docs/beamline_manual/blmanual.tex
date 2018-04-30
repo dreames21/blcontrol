@@ -1,6 +1,7 @@
 \documentclass[12pt]{report}
 \usepackage{graphicx}
 \usepackage{hyperref}
+\usepackage[nottoc,numbib]{tocbibind}
 
 %\linespread{1.3}
 
@@ -21,5 +22,9 @@
 \include{analysis}
 \include{calib}
 \include{troubleshooting}
+
+\bibliography{blmanual}{}
+\bibliographystyle{plain}
+
 
 \end{document}
