@@ -1,3 +1,6 @@
+# Beamline configuration file for motors and detectors
+# Last updated 10 April 2018
+
 [Motor Names]
 36144=yaw
 36142=pit
@@ -52,10 +55,6 @@ usbsn=AL00BUSL
 serialport=/dev/ttyUSB0
 timeout=5       ;seconds
 baudrate=9600
-
-[Det Type]
-14711=CdTe
-14845=SDD
 
 [Detector Port]
 timeout=10
