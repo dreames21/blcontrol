@@ -123,3 +123,6 @@ old/
 
 # Zero positions
 *bldata.txt
+
+#copy 1 of manual
+docs/beamline_manual/blmanual.pdf
