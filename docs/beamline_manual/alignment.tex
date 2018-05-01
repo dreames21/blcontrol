@@ -87,6 +87,7 @@ In this section, we align the optic in pitch and yaw, and the detector in the $x
 \item Without setting an ROI, perform a $3\times3$ grid scan to find the center of the beam, and move \textit{dx} and \textit{dy} to this location.
 
 \item If the optic has a multilayer, take a 30 second spectrum to find the multilayer peak. Set the ROI to encompass this peak. It should be wide enough to still encompass the entire peak, even if it shifts 1 or 2 keV in either direction during alignment, but should not encompass any ``stray peaks'' at lower energy.
+%reword this^^
 
 \textit{Note:} If the optic does not have a multilayer, then no ROI needs to be set. From now on during the alignment process, if an ROI is set, then the ROI peak or center of mass from a linear or grid scan should be used, as opposed to the peak or center of mass of the total counts.
 
