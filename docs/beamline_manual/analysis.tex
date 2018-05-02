@@ -1,11 +1,74 @@
 \chapter{Data Analysis}
 
+
+
 \section{Optic Resolution\label{sec:res}}
 
 \subsection{Half-Power Diameter\label{sec:hpd}}
 
-\subsection{Spatial Resolution\label{sec:spres}}
+The optic's half-power diameter (HPD) is found by fitting the count data to
+the following function, which is the integral of a gaussian:
+\begin{equation}
+  f(d) = A(1-\exp{\left(-\frac{(d-d_0)^2}{4b}\right)} + f_0
+    \label{eq:hpd_fit}
+\end{equation}
+where $d$ is the diameter of the pinhole, $f(d)$ is the count rate at
+that diameter, and $A$, $d_0$, $b$, and $f_0$ are fitting
+parameters. The HPD is then given by the value of $d$ where $f(d)$ is
+equal to half of its maximum value:
+\begin{equation}
+  \label{eq:hpd}
+  d_{1/2} = d_0 + 2 \sqrt{b \log{ \left( \frac{2A}{f_0 + A} \right)}}
+\end{equation}
 
-\subsection{Angular Resolution\label{sec:angres}}
+A script to perform this fit and produce an accompanying plot is found at
+\path{blcontrol/scripts/HPD.py}. To run the script
+\begin{verbatim}
+
+\end{verbatim}
+
+
+\subsection{Resolution\label{sec:res}}
+
+To calculate the spatial resolution from the HPD, we must account for the
+magnificaiton factor of the optic and the finite size of the source.  We assume
+that the source spot size and the optic spatial resolution add in quadrature to
+contribute to the measure HPD. Therefore, if the source size is $d_\text{src}$
+and the magnification factor is $M$, then the optic's spatial resolution $r$ can
+be approximated by
+\begin{equation}
+  \label{eq:sp_res}
+  r = \sqrt{ \left( \frac{d_{1/2}}{M} \right)^2 - d_\text{src}^2 }
+\end{equation}
+where $d_{1/2}$ is the measured HPD from Sec.~\ref{sec:hpd}.
+
+Given the spatial resolution, the angular resolution $\theta$ of the optic is
+easily estimated using the source-to-optic distance, $u$:
+\begin{equation}
+  \label{eq:ang_res}
+  \theta = 2 \arctan{ \left( \frac{r}{2u} \right) }
+\end{equation}
 
 \section{Reflectivity}
+
+The reflectivity of the optic is given by the ratio of the count rate incident
+on the optic in to the count rate focused by the optic onto the detector, for a
+given energy. The output spectrum is measured directly during the data
+acquisition (see Sec.~\ref{sec:spec-collect}). However, given the geometry of the
+beamline and the size of the detector, we can't directly measure the spectrum
+incident on the optic, but we can estimate it by measuring the source output
+with the detector placed at the focal length of the optic. Then, two correction
+factors must be applied. First, we must account for the difference in collecting
+area between the detector and the optic. Then, a correction must be applied to
+account for the fact that the intensity drops off with distance as
+$1/r^2$. Putting all this together, the reflectivity of the optic as a function
+of energy, $R(E)$, is given by:
+\begin{equation}
+  \label{eq:refl}
+  R(E) = \left( \frac{ I_\text{optic} }{ I_\text{source} } \right)
+  \left( \frac{ A_\text{optic} }{ A_\text{detector} } \right)
+  \left( \frac{ u }{ u+v } \right)^2
+\end{equation}
+
+A script to perform this computation can be found at
+\path{blcontrol/scripts/reflectivity.py}. 
