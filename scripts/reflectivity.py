@@ -31,7 +31,7 @@ TITLE = 'optic name + date' # plot title
 REF_LINE = 22.16            # location of reference line to be plotted, in keV
                             # if you don't want one, change to REF_LINE = None
 PLOT_START_ENERGY = 8       # where to start the x-axis (keV)
-PLOT_END_ENERGY = 30        # where to end the x-axis (kev)                            
+PLOT_END_ENERGY = 30        # where to end the x-axis (kev)                          
 PLOT_FILENAME = 'refl.png'  # location where you want plot to be saved
 
 

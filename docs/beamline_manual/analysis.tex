@@ -2,7 +2,7 @@
 
 
 
-\section{Optic Resolution\label{sec:res}}
+\section{Optic Resolution}
 
 \subsection{Half-Power Diameter\label{sec:hpd}}
 
@@ -28,7 +28,7 @@ A script to perform this fit and produce an accompanying plot is found at
 \end{verbatim}
 
 
-\subsection{Resolution\label{sec:res}}
+\subsection{Resolution}
 
 To calculate the spatial resolution from the HPD, we must account for the
 magnificaiton factor of the optic and the finite size of the source.  We assume
@@ -51,24 +51,44 @@ easily estimated using the source-to-optic distance, $u$:
 
 \section{Reflectivity}
 
-The reflectivity of the optic is given by the ratio of the count rate incident
-on the optic in to the count rate focused by the optic onto the detector, for a
-given energy. The output spectrum is measured directly during the data
-acquisition (see Sec.~\ref{sec:spec-collect}). However, given the geometry of the
-beamline and the size of the detector, we can't directly measure the spectrum
-incident on the optic, but we can estimate it by measuring the source output
-with the detector placed at the focal length of the optic. Then, two correction
-factors must be applied. First, we must account for the difference in collecting
-area between the detector and the optic. Then, a correction must be applied to
-account for the fact that the intensity drops off with distance as
-$1/r^2$. Putting all this together, the reflectivity of the optic as a function
-of energy, $R(E)$, is given by:
-\begin{equation}
-  \label{eq:refl}
-  R(E) = \left( \frac{ I_\text{optic} }{ I_\text{source} } \right)
-  \left( \frac{ A_\text{optic} }{ A_\text{detector} } \right)
-  \left( \frac{ u }{ u+v } \right)^2
-\end{equation}
+On the most basic level, the reflectivity of the optic at a given energy is
+simply the ratio of the number of photons reflected from the optic to the number
+of photons incident on the optic. This is called the \textit{double-bounce
+  reflectivity} because the photons are reflected once from each of the two ends
+of the optic. The \textit{single-bounce reflectivity} is the reflectivity after
+a single reflection from the optic, and corresponds to the reflectivity of the
+multilayer coating. If we assume that the multilayer is exactly the same on both
+ends of the optic, and thus they have the same single-bounce reflectivity, then
+we have that $R_\text{double-bounce} = R_\text{single-bounce}^2$. Of course, the
+multilayer will not be exactly the same on each end of the optic, but it's a
+useful approximation so that we can compare the optic to multilayers on flats
+and other samples.
 
-A script to perform this computation can be found at
-\path{blcontrol/scripts/reflectivity.py}. 
+When we take the long optic spectrum after aligning the optic, we are directly
+measuring the number of photons reflected from the optic. The input to the optic
+is related to, but not the same as, the spectrum we take from the source after
+removing the optic. It is not the same because the collecting area of the optic
+is different from the collecting area of the detector, and because the detector
+is farther from the source than the optic is, and the flux drops off as
+$1/r^2$. Taking these into account, the input spectrum $I_\text{input}(E)$ is
+related to the source spectrum taken in Sec.~\ref{sec:spec-collect},
+$I_\text{src}(E)$, by
+\begin{equation}
+  \label{eq:src-2-input}
+  I_\text{input}(E) = \left( \frac{ A_\text{optic} }{ A_\text{detector} }
+  \right) \left( \frac{ u+v }{ u } \right)^2 I_\text{src}(E),
+\end{equation}
+where $A_\text{optic}$ and $A_\text{detector}$ are the respective collecting
+areas of the optic and detector, $u$ is the distance from source to optic, and
+$v$ is the distance from optic to detector. Then taking the ratio of
+$I_\text{optic}$, the optic output spectrum, to $I_\text{input}$, yields the
+double-bounce reflectivity, and taking the square root of this yields the
+single-bounce reflectivity.
+
+A Python script to perform this computation, \path{reflectivity.py}, is provided
+in \path{blcontrol/scripts}. The most convenient way to run the script is by
+copying it to the directory where the optic and source spectrum data files are
+located. The variables at the beginning of the script will need to be edited for
+the parameters used, and then it can be run from the terminal using
+\path{./reflectivity.py}. The script produces a text file and a plot of the
+calculated reflectivity in each of the MCA channels.
