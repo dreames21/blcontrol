@@ -8,7 +8,9 @@ from fwhm import cen_fwhm
 
 #### USAGE: Copy this script into the directory where your beamline data is
 #### To run:
+#### cd to data directory, in terminal type:
 #### ./reflectivity.py
+#### OR in file browser, double click and select "run in terminal"
 
 #### Geometric Parameters ####
 D_OPT = 677.8   # distance from src to optic, mm
@@ -89,7 +91,7 @@ def plot_reflectivity():
     plt.clf()
     if REF_LINE:
         plt.axvline(x=REF_LINE, ymin=0, ymax=1, color='g', lw=2,
-            label=str(REF_LINE))
+            label=str(REF_LINE)+' keV')
     plt.plot(refl[:,0], refl[:,1], color='b', label='Measured Reflectivity')
     plt.plot([cen-fwhm/2., cen+fwhm/2.], [max_refl/2, max_refl/2],
         color='r')
