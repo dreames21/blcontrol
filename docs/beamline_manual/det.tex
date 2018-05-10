@@ -1,6 +1,12 @@
-\chapter{Detector Calibration\label{chap:calib}}
+\chapter{Detectors\label{chap:calib}}
 
-\section{Collecting calibration spectra}
+\section{Overview}
+
+
+
+\section{Calibration}
+
+\subsection{Collecting calibration spectra}
 
 Any source with spectral lines in the energy range of interest can be
 used for calibration. At the time of this writing, we are calibrating
@@ -38,7 +44,7 @@ acquired with every source following the steps below.
   source holder and place the holder in a locked cabinet.
 \end{enumerate}
   
-\section{Calibration data analysis}
+\subsection{Calibration data analysis}
 
 %outline calib script
 The script \path{blcontrol/scripts/calib.py} assists with the detector
@@ -51,10 +57,34 @@ the form
   \label{eq:calib-lin}
   E(C) = \frac{ C }{ \alpha \times G \times N } + E_0 \,
 \end{equation}
-where $G$ is the hardware gain and $N$ is the total number of
-channels. $\alpha$ and $E_0$, called the calibration factor and the
-offset, respectively, are fitting parameters, which we will put in the
-configuration file at \path{blcontrol/config/blconf.txt} to define
-each detector's calibration.
+where $G$ is the hardware gain and $N$ is the total number of channels. $\alpha$
+and $E_0$, called the calibration factor and the offset, respectively, are
+fitting parameters. Figures~\ref{fig:co57} and \ref{fig:linfit} show examples of
+the plots output by the calibration script. The script will also print the
+calculated values of the calibration factor and offset. You should inspect the
+outputs to ensure that the values printed are sensible. Then,to enable the
+calibration, paste these values into the appropriate location in
+\texttt{blconf.txt} for the detector that you are calibrating. 
+
+\begin{figure}
+  \centering
+  \includegraphics[width=0.7\textwidth]{Co57.png}
+  \caption{\label{fig:co57} An example of a calibration spectrum from $^{57}$Co,
+    with the peaks highlighted.}
+\end{figure}
+
+\begin{figure}
+  \centering
+  \includegraphics[width=0.7\textwidth]{linfit.png}
+  \caption{\label{fig:linfit} This plot shows a linear fit to the peak channel
+    as a function of energy for multiple calibration sources, calculated by the
+    script \texttt{calib.py}. }
+\end{figure}
+
 
 %show example output plot
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "Beamline_Manual"
+%%% End:
