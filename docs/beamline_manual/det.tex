@@ -11,15 +11,38 @@ and X-123 models are very similar, except the digital pulse processor and power
 supply in the XR-100 are separate from the detector and preamplifier, while in
 the X-123, everything is integrated into a single package.
 
-% cdte vs sdd
+The SDD and CdTe detector are useful for different situations and energy ranges
+of interest. The SDD has overall better resolution and lower noise, and is more
+efficient than the CdTe detector at low energies. The CdTe detector has a lower
+resolution and is more prone to noise at lower energies, but it is much more
+efficient at high energies. As a rule of thumb, the SDD should be used for
+measuring energies below about 25~keV, and the CdTe for energies higher than
+25~keV.
 
-% cooler etc.
+Any of the detector models from Amptek listed above can be mounted onto the
+detector stage assembly, powered up as specified in the manual, and connected to
+the computer via RS-232. The \texttt{blcontrol} software should automatically
+connect to the detector when next powered up; if not, try modifying the
+\texttt{serialport} configuration variable in \texttt{config/blconf.txt}.
 
-% how to be careful with the detectors
-
-% user manuals for each
+The detectors are rather fragile and it is important to handle them with
+care. In particular, they are very sensitive to any sort of mechanical shock, so
+it is important to not drop them during mounting, or allow them to run into any
+other elements of the beamline during alignment. The beryllium window on the end
+of the detector housing is also easily damaged. It is recommended to keep the
+red protective cap or a tungsten cap with no pinhole on the end of the detector
+when it is not in use. The detector diode is held under vacuum behind the Be
+window and cooled by a thermoelectric cooler (TEC). The detector has best performance
+(best resolution and least noise) when kept at a temperature below 225K. If the
+set point is below 225K but the TEC is unable to cool the detector to this
+temperature, this could indicate damage to the TEC or loss of vacuum, and the
+detector will likely need to be serviced by the manufacturer.
 
 \section{Calibration\label{sec:calib}}
+
+Each detector needs to be calibrated every few weeks or after a long period of
+disuse. To calibrate the detector, we measure sealed sources with known spectral
+lines and correlate the MCA channels of these lines with their energies.
 
 \subsection{Collecting calibration spectra}
 
