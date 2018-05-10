@@ -127,3 +127,8 @@ old/
 # Emacs
 .\#*
 \#*\#
+auto/
+_*
+
+# Notes for me
+notes.txt

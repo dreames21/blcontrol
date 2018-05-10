@@ -1,10 +1,25 @@
-\chapter{Detectors\label{chap:calib}}
+\chapter{Detectors\label{chap:det}}
 
 \section{Overview}
 
+The beamline software is compatible with Amptek detector assemblies which use
+the DP5 Pulse Processor and MCA board\cite{dp5_user_man}, including the
+XR-100\cite{xr-100-sdd-manual} and the
+X-123\cite{x-123-sdd-manual,x-123-cdte-manual} models, both of which come in
+silicon drift (SDD) or cadmium telluride (CdTe) detector varieties. The XR-100
+and X-123 models are very similar, except the digital pulse processor and power
+supply in the XR-100 are separate from the detector and preamplifier, while in
+the X-123, everything is integrated into a single package.
 
+% cdte vs sdd
 
-\section{Calibration}
+% cooler etc.
+
+% how to be careful with the detectors
+
+% user manuals for each
+
+\section{Calibration\label{sec:calib}}
 
 \subsection{Collecting calibration spectra}
 
@@ -24,13 +39,13 @@ acquired with every source following the steps below.
   mylar on the end of the Cu pipe near the detector. Using the knobs
   on the stages, move the detector so that the Be window is close to
   the source.
-\item In the software, acquire a short spectrum (30 seconds to 1
-  minute) to ensure that the source peaks are visible and the detector
-  dead time is not too high (should be <5\%). If necessary, move the
-  detector and take another short spectrum.
-\item \label{itm:acquire} Acquire a spectrum for at least 10 minutes,
-  and then save it. You should use a large number of channels to get
-  the best possible resolution---8192 is best.
+\item In the software, acquire a short spectrum (30 seconds to 1 minute) to
+  ensure that the source peaks are visible and the detector dead time is not too
+  high (should be <5\%). You should use a large number of channels to get the
+  best possible resolution---8192 is best. If necessary, move the detector and
+  take another short spectrum.
+\item \label{itm:acquire} Acquire a long spectrum with the same number of
+  channels for at least 10 minutes, and then save it.
 \item \label{itm:reacquire} If the peaks in this 10 minute spectrum
   are still not very well resolved, take another spectrum for 10
   minutes or more. All spectra from a given sample can be added
