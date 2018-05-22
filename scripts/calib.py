@@ -5,14 +5,14 @@ sys.path.append('/home/bladmin/blcontrol/scripts')
 from fwhm import cen_fwhm
 import scipy.optimize as opt
 
-numchans = 2048
-
 energies = []
 channels = []
 fwhms    = []
 
 #### Fe55 ####
 Fe55spec = np.loadtxt('Fe55.txt')[:,1]
+
+numchans = len(Fe55spec)
 
 plt.figure(1)
 plt.clf()

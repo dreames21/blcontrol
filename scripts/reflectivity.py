@@ -15,7 +15,7 @@ from fwhm import cen_fwhm
 #### Geometric Parameters ####
 D_OPT = 677.8   # distance from src to optic, mm
 D_DET = 3050    # distance from src to detector, mm
-PIN_SIZE = 3    # pinhole radius used to take src spectrum
+PIN_SIZE = 3    # pinhole diameter used to take src spectrum
 OPT_AREA = 46.7 # collecting area of optic in mm**2
 
 

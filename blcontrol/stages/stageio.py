@@ -87,7 +87,9 @@ class StageIO(object):
             self.port.timeout = old_timeout # Restore previous timeout
         for motor in self.motors_by_num.values():
             motor.post_init()
-        self.motors = {motor.name : motor for motor in self.motors_by_num.values()}
+        self.motors = {motor.name : motor for motor in
+                        self.motors_by_num.values()}
+        self.enable_move_tracking()
                 
     def send_all(self, command_num, data=0):
         """Send a command to all connected motors."""
