@@ -22,10 +22,12 @@ equal to half of its maximum value:
 \end{equation}
 
 A script to perform this fit and produce an accompanying plot is found at
-\path{blcontrol/scripts/HPD.py}. To run the script
-\begin{verbatim}
-
-\end{verbatim}
+\path{blcontrol/scripts/HPD.py}. The \path{find_HPD} function defined in the
+script takes two lists as input, a list of the pinhole diameters, and a list of
+the corresponding number of counts recorded in the ROI using that pinhole. It
+will fit a function like \label{eq:hpd_fit} and produce a plot that shows the
+fitted function and the calculated HPD. You can use this function by importing
+it and running it from the Python interpreter in a terminal.
 
 
 \subsection{Resolution}
@@ -50,6 +52,8 @@ easily estimated using the source-to-optic distance, $u$:
 \end{equation}
 
 \section{Reflectivity}
+
+\subsection{Calculation}
 
 On the most basic level, the reflectivity of the optic at a given energy is
 simply the ratio of the number of photons reflected from the optic to the number
@@ -92,6 +96,99 @@ located. The variables at the beginning of the script will need to be edited for
 the parameters used, and then it can be run from the terminal using
 \path{./reflectivity.py}. The script produces a text file and a plot of the
 calculated reflectivity in each of the MCA channels.
+
+\subsection{Modeling}
+
+To model the reflectivity of the optic, we consider the path of a ray emanating
+from the source, reflecting from each end of the optic, and impinging on the
+detector. It is characterized by energy $E$ and the angle $\phi$ that it makes
+with respect to the axis of the optic. We assume that the intensity of the
+source is constant in phi so that $I(\phi, E) = I_0(E)$ where $I_0(E)$ is simply
+the spectrum of the source. The ray reflects from one end of the optic (we'll
+assume it's the $h$-end, but it's the same in either orientation) at a graze
+angle $\theta_h$ which is a function of $\phi$: $\theta_h = \theta_h(\phi)$. The
+multilayer on this end has a reflectivity as a function of energy and graze
+angle $R'_h(\theta_h, E) = R_h(\phi, E)$ that is determined by the properties of
+the multilayer, including the $d$-spacing, $\Gamma$, and microroughness. After
+reflecting from the $h$ end, the intensity $I'(\phi, E) = R_h(\phi, E)
+I_0(E)$. The ray then impinges on the $e$-end of the optic which has a
+reflectivity function $R_e(\phi, E)$, and the intensity
+$I''(\phi, E) = R_h(\phi, E) R_e(\phi, E) I_0(E)$. The ray then continues to the
+detector. Thus if we divide through by the source spectrum, the two-bounce
+reflectivity of the optic as a whole is
+
+\begin{equation}
+  R_\text{opt}(\phi, E) = R_h(\phi, E) R_e(\phi, E) .
+  \label{eq:dbl_bounce}
+\end{equation}
+
+Of course, the detector is not sensitive to the angle of incidence of the
+incoming rays, only the energy. So we integrate over all values of $\phi$ which
+produce a valid ray that will reflect from the optic. These limits of
+integration $\phi_1$ and $\phi_2$ can be determined from the design geometry of
+the optic. The area element $dA$ in this case is the area of the ring on the $h$-end
+of the optic where the rays with angles between $\phi$ and $\phi + d\phi$ will
+reflect. Then divide by the total area of the $h$ end. All together, this looks
+like:
+\begin{equation}
+  \label{eq:area_int}
+  R_\text{opt}(E) = \frac{\int^{\phi_1}_{\phi_2} R_h(\phi, E) R_e(\phi, E) dA}{
+    \int^{\phi_1}_{\phi_2} dA } .
+\end{equation}
+
+In practice, actually calculating $dA$ and doing the integral is not worth the
+hassle. We can get a pretty good approximation simply by averaging over
+$\phi$. We would also like to use the actual graze angles $\theta_h$ and
+$\theta_e$ as variables, as this is what we will need to input into IMD.  We
+will integrate from the edge to the intersection, keeping in mind that a ray
+that reflects near the edge on one end will reflect near the edge on the other
+end, and similarly for a ray near the intersection. Thus,
+\begin{equation}
+  \label{eq:phi_int}
+  R_\text{opt}(E) =\frac{1} {
+    \int^{\phi_\text{edge}}_{\phi_\text{int}}  d\phi } \int^{ \phi_\text{edge}
+  }_{ \phi_\text{int}}
+  R_h(\theta_h, E) R_e( \theta_e, E) d\phi .
+\end{equation}
+Equation~\ref{eq:phi_int} is used as the basis for the numerical model that is
+computed using IMD and Python. IMD is used to calculate $R_h$ and $R_e$, and a
+Python script performs the integration.
+% The Python script \path{blcontrol/scripts/model.py} gives an example of how to
+% produce a model for the reflectivity of a Wolter optic, using IMD \path{.sav}
+% files as starting points for the model. IMD is used to calculate the
+% reflectivity functions for the multilayers on each end of the optic as functions
+% of energy and graze angle. The Python script combines these reflectivity
+% functions and averages over them to produce a model of optic reflectivity as a
+% function of energy.
+
+To calculate the reflectivity in IMD, first define the multilayer stack for the
+$h$-end of the optic, with an appropriate $d$-spacing, $\Gamma$, and
+microroughness. Also include the Pt and NiCo substrate if necessary. Then, under
+Independent Variables in the IMD window, define the range of energies and graze
+angles. The graze angles for the $h$-end are defined in the mandrel design
+parameters, and we proceed from the edge to the intersection. The number of
+energy values you use should be comparable to the number of MCA channels used to
+collect the data, and $~20$ graze angle values is usually sufficient. Calculate
+the reflectivity in the menu Calculate $\rightarrow$ Specular Optical Functions
+and Fields, and then save the \path{.imd} file. Close the plot and export to a
+\path{.sav} file from the menu using File $\rightarrow$ Export Results to IDL
+Save File.... Repeat this process for the $e$-end of the optic, using the same
+energy values and the same number of graze angles, but using the values defined
+for the $e$-end in the mandrel design. When finished, you should have a
+\path{.imd} and a \path{.sav} each for the $h$ end and the $e$ end of the optic
+which represent their respective reflectivity functions.
+
+The Python script to perform the integration is found at
+\path{blcontrol/scripts/model.py}. It parses the \path{.sav} files, performs the
+multiplication of the reflectivity functions, and averages over the graze
+angles. The script also uses a Gaussian smoothing filter to simulate the finite
+energy resolution of the detector. It then plots the square root of
+$R_\text{opt}$, which is the single-bounce reflectivity, along with the measured
+single-bounce reflectivity for comparison. You can use this plot to go back and
+tweak various model parameters such as the $d$-spacing, microroughness, and
+density of each end of the optic, and the energy resolution of the detector, to
+see how they affect the model.
+
 
 %%% Local Variables:
 %%% mode: latex
