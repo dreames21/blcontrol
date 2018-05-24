@@ -13,7 +13,7 @@ import scipy.optimize as opt
 ## Copy this script into the directory containing the calibration source
 ## spectrum data files.
 ##
-## Edit the bottom portion of the script (under ''if __name__ == '__main__') to
+## Edit the bottom portion of the script (under "if __name__ == '__main__'") to
 ## have the right filenames, spectral lines, and a guess for the channel number
 ## of each peak.
 ##
@@ -23,7 +23,7 @@ import scipy.optimize as opt
 ## an error if the condition is not met). The amount of acquisition time doesn't
 ## matter and can be different for different sources.
 ##
-## To run, cd into the directory with the script and data files. If necsesary,
+## To run, cd into the directory with the script and data files. If necessary,
 ## make this script executable by typing
 ## chmod +x calib.py
 ## Then run the script by typing
