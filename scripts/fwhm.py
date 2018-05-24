@@ -1,9 +1,6 @@
-import numpy as np
 from scipy import interpolate, optimize
 
 def cen_fwhm(xdata, ydata):
-    xdata = list(xdata)
-    ydata = list(ydata)
     assert len(xdata) == len(ydata)
     ydata -= min(ydata)
     max_y = max(ydata)
