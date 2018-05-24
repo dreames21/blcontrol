@@ -53,6 +53,7 @@ class CalibSource:
         self.lines = lines
         self.guesses = guesses
         self.gain = self.get_gain()
+        self.det_sernum = self.get_det_sernum()
 
     def get_gain(self):
         """Reads the preamp gain from the footer of a data file"""
@@ -64,7 +65,19 @@ class CalibSource:
                     break
                 #throw error if no gain is found by end of file
                 #(last line of file is empty string)
-                assert line, "gain not found in file {0}".format(filename)
+                assert line, "gain not found in {0}".format(filename)
+
+    def get_det_sernum(self):
+        """Reads the detector serial number from footer of data file"""
+        with open(self.filename, 'r') as f:
+            while True:
+                line = f.readline()
+                if line.startswith('# serial number'):
+                    return int(line.split()[-1])
+                    break
+                #throw error if no gain is found by end of file
+                #(last line of file is empty string)
+                assert line, "serial number not found in {0}".format(filename)
 
     def match_lines(self, radius=50):
         """Finds peaks in data based on guesses provided.
@@ -129,16 +142,18 @@ def fit_peaks(calib_sources):
         calib_sources: a list of CalibSource objects
     """
 
-    # initialize number of channels and gain from first calib source. Later
-    # will check to make sure all sources have same gain and number of channels
+    # initialize number of channels, gain and det serial number from first calib
+    # source. Later will check to make sure all sources have same parameters
     num_chans = calib_sources[0].num_chans
     gain = calib_sources[0].gain
+    det_sernum = calib_sources[0].det_sernum
 
     # put all data from calib sources together in lists
     energies, peak_chans, fwhms = [], [], []
     for source in calib_sources:
         assert source.num_chans == num_chans
         assert source.gain == gain
+        assert source.det_sernum == det_sernum
         for i, match in enumerate(source.match_lines()):
             energies.append(source.lines[i])
             peak_channel, fwhm = match
@@ -166,7 +181,9 @@ def fit_peaks(calib_sources):
     plt.text(num_chans/2, 5, s)
     plt.savefig("linfit.png")
 
-    print s
+    print "\nCalibration parameters for detector with S/N {0}:".format(
+        det_sernum)
+    print s + '\n'
         
 
 if __name__ == '__main__':
