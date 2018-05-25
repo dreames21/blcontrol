@@ -8,7 +8,7 @@ from fwhm import cen_fwhm
 
 #### USAGE: Copy this script into the directory where your beamline data is
 #### To run:
-#### cd to data directory, in terminal type:
+#### edit parameters below, cd to data directory, in terminal type:
 #### ./reflectivity.py
 #### OR in file browser, double click and select "run in terminal"
 
@@ -36,14 +36,6 @@ PLOT_START_ENERGY = 8       # where to start the x-axis (keV)
 PLOT_END_ENERGY = 30        # where to end the x-axis (kev)                          
 PLOT_FILENAME = 'refl.png'  # location where you want plot to be saved
 
-
-#### Options ####
-# the following line creates the reflectivity text file-- change to False
-# if the file already exists
-CREATE_TXT_FILE = True
-
-# the following line creates the plot-- change to False if you don't want a plot
-CREATE_PLOT     = True
 
 def calculate_reflectivity():
     """Calculates the reflectivity using global variables defined above and
@@ -106,9 +98,11 @@ def plot_reflectivity():
     plt.savefig(PLOT_FILENAME)
 
 if __name__ == "__main__":
-    if CREATE_TXT_FILE:
-        calculate_reflectivity()
 
-    if CREATE_PLOT:
-        plot_reflectivity()
+    ## comment if you don't need to recalculate reflectivity-- will load from 
+    ## existing text file
+    calculate_reflectivity()
+
+    ## comment if you don't want a plot
+    plot_reflectivity()
     
