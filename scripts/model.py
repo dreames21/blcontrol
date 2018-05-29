@@ -76,18 +76,19 @@ def plot_model(refl, measured_filename, ref_line=None):
     """
     energy = refl[0,:]
     single_bounce = np.sqrt(refl[1,:])
-    measured_refl = np.loadtxt(measured_filename)
-    
+        
     cen, fwhm = cen_fwhm(energy, single_bounce)
     max_refl = max(single_bounce)
     max_energy = energy[np.argmax(single_bounce)]
 
     plt.clf()
     if ref_line:
-        plt.axvline(x=22.3, ymin=0, ymax=1, color='r', lw=2,
-            label='Reference line')
+        plt.axvline(x=ref_line, ymin=0, ymax=1, color='r', lw=2,
+            label='Reference line\n{0} keV'.format(ref_line))
+    if measured_filename:
+        measured_refl = np.loadtxt(measured_filename)
+        plt.plot(measured_refl[:,0], measured_refl[:,1], label='Measured')
     plt.plot(energy, single_bounce, label='Model')
-    plt.plot(measured_refl[:,0], measured_refl[:,1], label='Measured')
     plt.plot([cen-fwhm/2., cen+fwhm/2.], [max_refl/2, max_refl/2],
         color='r')
     plt.text(cen-fwhm, max_refl/2,
@@ -110,6 +111,6 @@ if __name__ == "__main__":
     ## uncomment if .txt file already exists
     #smoothed = np.loadtxt("model_refl.txt")
 
-    plot_model(smoothed, "../beamline_data/reflectivity.txt", ref_line=22.3)
+    plot_model(smoothed, "../beamline_data/reflectivity.txt", ref_line=22.5)
     
     
