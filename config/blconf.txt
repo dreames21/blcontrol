@@ -6,11 +6,13 @@
 36142=pit
 36153=dx
 34795=dy
-36592=dz
+51607=dz
 36900=ox
 50852=oy
 36610=oz
 37203=rot3
+#this is 'old' 6inch linear stage for detctor 
+#36592=dz
 
 [Motor Res]
 # Deg/step or mm/step, from zaber.com
@@ -45,7 +47,7 @@ pit=
 rot3=
 dx=50.8
 dy=152.4
-dz=150
+dz=300
 ox=150
 oy=40
 oz=254
@@ -78,6 +80,6 @@ calib_factor=0.000772012270785
 offset=-0.302908357512
 
 [2607 Calib]
-#as of 20 April 2017
-calib_factor=0.000564960446259
-offset=-0.104852853501
+#as of 22 May 2018
+calib_factor=0.000779844155356
+offset=-0.0443285678296

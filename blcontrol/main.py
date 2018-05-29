@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /home/bladmin/blcontrol/venv/bin/python
 
 import ConfigParser
 import os

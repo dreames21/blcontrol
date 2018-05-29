@@ -5,6 +5,7 @@ of available commands.
 """
 
 HOME =       1
+RENUMBER =   2
 MTRACK =     8  # move tracking
 MANMTRACK = 10  # manual move tracking
 MANMV =     11  # manual move displacement

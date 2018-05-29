@@ -61,30 +61,41 @@ class StageIO(object):
         """Populates `self.motors` with objects for each connected motor."""
         old_timeout = self.port.timeout  # Save previous timeout
         try:
-            #Set timeout to 0.5 seconds.  The number of motors is
+            #Set timeout to 2 seconds.  The number of motors is
             #determined by how many replies are read before a timeout occurs.
-            self.port.timeout = 0.5
+            self.port.timeout = 1
             self.port._ser.reset_input_buffer()
-            sernums = {}
-            self.send_all(com.SERNUM)
+
+
+            # need to renumber all motors. motors are identified by their
+            # replies
+            motornums = []
+            self.port.write(0, com.RENUMBER)
+            #time.sleep(0.5)
             while True:
                 try:
                     reply = self.port.read()
-                    sernums[reply.device_number] = reply.data
+                    motornums.append(reply.device_number)
                 except zb.exceptions.TimeoutError:
                     break
+
+            # set up motors and position data queues
             pos_queues = {}
             reply_queues = {}
-            for motor_num, sernum in sernums.iteritems():
+            for motor_num in motornums:
                 motor = Motor(motor_num, self.port, self.config,
                               self.zeroposconfig)
                 self.motors_by_num[motor_num] = motor
                 pos_queues[motor_num] = motor.pos_queue
                 reply_queues[motor_num] = motor.reply_queue
+
+            # start thread to continuously monitor serial port
             self.reader = SerialPortReader(self.port, pos_queues, reply_queues)
             self.reader.start()
         finally:
             self.port.timeout = old_timeout # Restore previous timeout
+
+        # finish initializing motors by setting serial number and 
         for motor in self.motors_by_num.values():
             motor.post_init()
         self.motors = {motor.name : motor for motor in
