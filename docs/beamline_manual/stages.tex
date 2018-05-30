@@ -1,0 +1,60 @@
+\chapter{Stages}
+
+\section{Overview}
+
+The stages used in this beamline are from Zaber Technologies, Inc., and have
+built-in drivers, controllers, and encoders. They can be controlled via software
+or by turning the knobs located on the side of the motor housing. In general
+they need very little setup before use, and many of the relevant information has
+already been covered in Chapter~\ref{sec:software}. The following sections will
+cover the procedure for setting up a new stage in the beamline.
+
+\section{Setting up a new stage}
+
+\subsection{Setting to correct protocol}
+
+The first step to using a brand new Zaber stage is to ensure that the
+communication protocol and baud rate are set properly to communicate with the
+\path{blcontrol} software and with each other. There are two communication
+protocols for the Zaber stages, Binary and ASCII. The software communicates
+using the binary protocol because some of the stages aren't capable of using the
+ASCII protocol, and we use a baud rate of 9600 which is the default for the
+binary protocol.
+
+The easiest way to change the communication protocol is by using the Zaber
+Console software, which runs on Windows only. It can be installed from the Zaber
+website at \url{https://www.zaber.com/wiki/Software/Zaber_Console}. Once it is
+installed, connect the stage to the PC. You may have to use a serial connector
+instead of USB if the Windows PC doesn't have the correct drivers for a
+USB-to-RS232 converter. Open the software, open the serial port, and press the
+``Find Devices'' button. Choose the option to convert all devices to Binary
+protocol at 9600 baud. Once this process is complete, you can disconnect the
+stage from the Windows PC and install it in the beamline.  
+
+\subsection{Editing configuration file}
+
+The structure of the configuration files is discussed in detail in
+Sec.~\ref{sec:config}. For a new stage, it is necessary to define a few
+parameters in the configuration file before it can be used with the
+software. Give the motor a short name under ``Motor Names,'' and then this name
+will be used to set the configuration values in the following
+sections. Following the instructions from Sec.~\ref{sec:config}, create entries
+for ``Motor Res,'' ``Max Current,'' and ``Travel,'' following the specification
+sheet for the new device. Save the configuration file, and you are ready to
+start up the software and use the new stage. Note that the new stage, and any
+stages that were unplugged from power during the installation of the new stage,
+will likely have to be homed before use. See Sec.~\ref{sec:motor_control} for
+details on homing the stages.
+
+\subsection{Editing stage firmware settings}
+
+A list of all the settings that can be edited in the stage firmware can be found
+in the Zaber Binary Protocol Manual\cite{zaber_bin_protocol}. Most of the
+settings will not need to be changed, but you may want to edit the running
+and/or holding currents if the motors seem to be getting hot. These can be
+changed in the Zaber Console software on Windows.
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "Beamline_Manual"
+%%% End:
