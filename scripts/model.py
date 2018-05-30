@@ -63,7 +63,7 @@ def smooth(refl, res):
     ## convert FWHM to sigma and energy to channels
     sigma = res/(delta_E*2*np.sqrt(2*np.log(2)))  
     smoothed = gaussian_filter1d(reflectivity, sigma)
-    return np.array([energy, smoothed])
+    return np.array([energy, smoothed]).T
 
 def plot_model(refl, measured_filename, ref_line=None):
     """Plots single-bounce reflectivity from model against measured data.
@@ -74,8 +74,8 @@ def plot_model(refl, measured_filename, ref_line=None):
         measured_filename: filename of measured data file
         ref_line: energy value at which vertical reference line will be plotted
     """
-    energy = refl[0,:]
-    single_bounce = np.sqrt(refl[1,:])
+    energy = refl[:,0]
+    single_bounce = np.sqrt(refl[:,1])
         
     cen, fwhm = cen_fwhm(energy, single_bounce)
     max_refl = max(single_bounce)
