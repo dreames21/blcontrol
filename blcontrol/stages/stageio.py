@@ -61,7 +61,7 @@ class StageIO(object):
         """Populates `self.motors` with objects for each connected motor."""
         old_timeout = self.port.timeout  # Save previous timeout
         try:
-            #Set timeout to 2 seconds.  The number of motors is
+            #Set timeout to 1 second.  The number of motors is
             #determined by how many replies are read before a timeout occurs.
             self.port.timeout = 1
             self.port._ser.reset_input_buffer()
