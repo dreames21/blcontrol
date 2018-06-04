@@ -1,18 +1,19 @@
 \chapter{Software Overview\label{sec:software}}
 
 This chapter will serve as an overview of the functionality of the
-\texttt{blcontrol} software. Figure~\ref{fig:ui} shows the full user interface
-that appears when the application is started. Each panel in the window is
-explained in its own section below.
-
-%start software
+\texttt{blcontrol} software. The software can be started either by
+double-clicking on the desktop icon, or by navigating to the
+\path{blcontrol/blcontrol} directory in the terminal and typing
+\path{./main.py}. Figure~\ref{fig:ui} shows the full user interface that appears
+when the application is started. Each panel in the window is explained in the
+sections below.
 
 \begin{figure}
 \centering \includegraphics[width=\textwidth]{fullui.png}
 \caption{\label{fig:ui} Screenshot of the full user interface on startup. The
-  elements of the interface, clockwise from top left, are the scan settings, the
-  single spectrum plot, the detector status readout, the motor control panel,
-  and the scan plot.}
+  elements of the interface, clockwise from top left, are the scan settings
+  panel, the single spectrum plot, the detector status readout, the motor
+  control panel, and the scan plot.}
 \end{figure}
 
 \section{Scan Settings}
@@ -25,18 +26,16 @@ explained in its own section below.
 
 The scan settings panel is shown in Fig.~\ref{fig:scanset}. The top half
 contains fields for setting a sample name and ROI (region of interest) and a
-drop-down menu for choosing a scan type.
+drop-down menu for choosing a scan type. The sample name field is only used to
+identify the sample in any saved files. You can put whatever you like here or
+leave it blank. The ROI setting allows you to choose a region of the spectrum
+between two energy values to be analyzed in real-time along with the total
+spectrum. If this value is set, the ROI will be highlighted in the spectrum plot
+and information about the portion of the spectrum will be displayed on the
+plot. The counts in the ROI will also be counted separately in any scans that
+are run.
 
-The sample name field is only used to identify the sample in any saved
-files. You can put whatever you like here or leave it blank.
-
-The ROI setting allows you to choose a region of the spectrum between two energy
-values to be analyzed in real-time along with the total spectrum. If this value
-is set, the ROI will be highlighted in the spectrum plot and information about
-the portion of the spectrum will be displayed on the plot. The counts in the ROI
-will also be counted separately in any scans that are run.
-
-The dropdown menu allows you to choose what type of scan to run, with the
+The drop-down menu allows you to choose what type of scan to run, with the
 choices being ``Single Spectrum,'' ``Linear Scan'' and ``Grid Scan.'' Each scan
 type is covered in more detail below. When the scan type is changed, the lower
 portion of the panel will change to display the settings available for that scan
@@ -44,9 +43,9 @@ type.  For each scan type, press the ``Start'' button on the bottom of the scan
 settings panel to begin running the scan. The ``Stop'' button may be used to
 terminate the scan prematurely. Once a scan is finished or has been stopped by
 the user, the ``Save Scan'' button allows you to save the data from the most
-recent scan in a plaintext format. The saved scan file will include all of the
-detector status and settings data, and the current position of each connected
-stage.
+recent scan in a plaintext format. In addition to the count data for each MCA
+channel, the saved scan file includes a footer which lists all detector status
+and settings data and the current position of each connected stage.
 
 \subsection{Single Spectrum}
 
@@ -54,19 +53,21 @@ Fig.~\ref{fig:scanset} shows the layout of the scan settings panel when ``Single
 Spectrum'' is selected. For a single spectrum, there are only two scan-specific
 options: the accumulation time, in seconds, and the number of MCA channels to be
 used. The accumulation time can be any value, and the number of channels is
-selectable from a drop down menu. The detector allows the use of 256, 512, 1024,
-2048, 4096, or 8192 channels.
+selectable from a drop down menu, with options of 256, 512, 1024, 2048, 4096, or
+8192.
 
 \begin{figure}
 \centering \includegraphics[width=0.7\textwidth]{specplot.png}
 \caption{\label{fig:specplot} The spectrum plot display panel, during the
-  collection of a single spectrum.}
+  collection of a single spectrum. The ROI is highlighted in blue, and
+  statistics about the spectrum are listed at the top.}
 \end{figure}
 
 When the spectrum acquisition is started, after a few seconds the spectrum will
 begin to display in the spectrum plot display panel, to the right of the scan
 settings panel. This plot will update in real time (with the update frequency
-depending on the number of channels) until the acquisition is complete.
+depending on the number of channels---more channels means slower data
+transmission) until the acquisition is completed or stopped.
 
 An example image of the spectrum plot is shown in Fig.~\ref{fig:specplot}. In
 the upper left corner, the green text displays some information about the
@@ -74,16 +75,16 @@ spectrum: the total number of counts, the number of counts and the location of
 the peak channel, and the full width at half maximum (FWHM) and center of the
 highest peak in the spectrum.  For this spectrum, the ROI was set to 15-25 keV,
 and this region is highlighted in blue. The blue text in the upper right corner
-gives the similar information about the portion of the spectrum that is
+gives corresponding information about the portion of the spectrum that is
 contained in the ROI. In this example, the highest peak in the ROI is the same
 as the highest peak in the full spectrum.
 
 \subsection{Linear Scan}
 
-A linear scan consists of moving a single stage over a distance in specified
-increments, and taking a spectrum at each position. This is useful during the
-alignment process, when you want to position each stage at the location that
-maximizes the count rate.
+In a linear scan, a single stage is moved in equal increments over a specified
+distance, and a spectrum is recorded at each position. This type of scan is used
+frequently during the alignment process, where the goal is to position each
+stage at the location that maximizes the count rate.
 
 \begin{figure}
 \centering \includegraphics[width=0.45\textwidth]{linscan.png}
@@ -449,3 +450,8 @@ and it must have the heading \verb|[***** Calib]|, where \verb|*****| is the
 serial number of the detector. Comment lines should always be given for each
 detector to indicate when it was last calibrated. For more information on
 calibrating the detectors, see Sec.~\ref{sec:calib}.
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "Beamline_Manual"
+%%% End:
